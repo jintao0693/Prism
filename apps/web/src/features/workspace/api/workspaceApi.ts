@@ -26,6 +26,8 @@ const WORKSPACES: Workspace[] = [
 const USAGE: UsageSummary = {
   imagesThisMonth: 0,
   videosThisMonth: 0,
+  imagesSoftLimit: 50,
+  videosSoftLimit: 10,
 };
 
 function mapWorkspace(raw: Record<string, unknown>): Workspace {
@@ -71,5 +73,7 @@ export async function getUsageSummary(): Promise<UsageSummary> {
   return {
     imagesThisMonth: Number(raw.imagesThisMonth ?? raw.images_this_month ?? 0),
     videosThisMonth: Number(raw.videosThisMonth ?? raw.videos_this_month ?? 0),
+    imagesSoftLimit: Number(raw.imagesSoftLimit ?? raw.images_soft_limit ?? 50),
+    videosSoftLimit: Number(raw.videosSoftLimit ?? raw.videos_soft_limit ?? 10),
   };
 }

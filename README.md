@@ -157,6 +157,7 @@ python scripts/run_game_cases.py
 |--------|------|
 | 产品定位、用户、MVP / Phase 范围 | [docs/PRODUCT.md](docs/PRODUCT.md) |
 | 当前做到哪了 | [docs/PROGRESS.md](docs/PROGRESS.md) |
+| 产品与技术优化 backlog | [docs/OPTIMIZATION.md](docs/OPTIMIZATION.md) |
 | 游戏向案例联调详情 | [docs/GAME_CASES.md](docs/GAME_CASES.md) |
 | 路线图 | [ROADMAP.md](ROADMAP.md) |
 | 架构与目录 | [docs/TECHNICAL.md](docs/TECHNICAL.md)、[docs/STRUCTURE.md](docs/STRUCTURE.md) |

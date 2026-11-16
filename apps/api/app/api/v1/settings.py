@@ -50,6 +50,8 @@ async def usage_summary(
     return UsageSummaryOut(
         imagesThisMonth=row.images_count,
         videosThisMonth=row.videos_count,
+        imagesSoftLimit=50,
+        videosSoftLimit=10,
     )
 
 

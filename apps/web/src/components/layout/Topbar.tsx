@@ -3,7 +3,7 @@
 import Link from "next/link";
 import BrandMark from "@/components/ui/BrandMark";
 import Avatar from "@/components/ui/Avatar";
-import Button from "@/components/ui/Button";
+import NewChatButton from "@/components/layout/NewChatButton";
 import WorkspacePill from "@/components/layout/WorkspacePill";
 import { routes } from "@/lib/routes";
 import styles from "./Topbar.module.css";
@@ -27,15 +27,10 @@ export default function Topbar({
         <Link href={routes.workspaces} className={styles.brandLink}>
           <BrandMark />
         </Link>
-        <WorkspacePill
-          name={workspaceName}
-          href={routes.workspaces}
-        />
+        <WorkspacePill name={workspaceName} href={routes.workspaces} />
       </div>
       <div className={styles.right}>
-        <Link href={routes.chat(workspaceId)}>
-          <Button variant="ghost">＋ 新对话</Button>
-        </Link>
+        <NewChatButton workspaceId={workspaceId} />
         <Avatar text={avatarText} />
         <span className="sr-only">{userName}</span>
       </div>

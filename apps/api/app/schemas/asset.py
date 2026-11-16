@@ -21,6 +21,7 @@ class AssetOut(BaseModel):
         default="image",
         alias="previewKind",
     )
+    parent_asset_id: str | None = Field(default=None, alias="parentAssetId")
 
     model_config = {"populate_by_name": True, "from_attributes": True}
 

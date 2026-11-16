@@ -13,7 +13,7 @@ from app.core.db import get_db
 from app.core.storage import get_storage
 from app.models.asset import Asset
 from app.schemas.asset import AssetOut
-from app.services.agent.asset_memory import dumps_asset_meta
+from app.services.agent.asset_memory import dumps_asset_meta, loads_asset_meta
 from app.services.media.preview import asset_preview_fields
 
 router = APIRouter(prefix="/assets", tags=["资产"])
@@ -31,6 +31,10 @@ _ALLOWED_IMAGE_TYPES = {
 
 def _to_out(asset: Asset, tone: str) -> AssetOut:
     preview = asset_preview_fields(asset)
+    meta_obj = loads_asset_meta(asset.meta)
+    parent_id = meta_obj.get("parent_asset_id")
+    if parent_id is not None:
+        parent_id = str(parent_id)
     return AssetOut(
         id=asset.id,
         name=asset.name,
@@ -41,6 +45,7 @@ def _to_out(asset: Asset, tone: str) -> AssetOut:
         thumbUrl=preview["thumbUrl"],
         mimeType=preview["mimeType"],
         previewKind=preview["previewKind"],
+        parentAssetId=parent_id,
     )
 
 

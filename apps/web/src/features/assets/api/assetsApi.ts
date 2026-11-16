@@ -47,6 +47,49 @@ const ASSETS: AssetItem[] = [
   },
 ];
 
+const MODE_LABELS: Record<string, string> = {
+  text_to_image: "文生图",
+  image_to_image: "图生图",
+  text_to_video: "文生视频",
+  image_to_video: "图生视频",
+  upload: "上传",
+};
+
+function providerLabel(provider: string): string {
+  if (!provider) return "";
+  if (provider.includes("volc") || provider.includes("ark")) return "火山方舟";
+  if (provider.includes("demo")) return "演示";
+  return provider;
+}
+
+/** 把后端 JSON meta 收成一行可读文案（工作台 / 资产中心共用）。 */
+export function formatAssetMetaLabel(
+  rawMeta: unknown,
+  kind: AssetKind = "image",
+): string {
+  const text = rawMeta == null ? "" : String(rawMeta).trim();
+  if (!text) return kind === "video" ? "视频资产" : "图片资产";
+  if (!text.startsWith("{")) return text;
+
+  try {
+    const data = JSON.parse(text) as Record<string, unknown>;
+    const mode = String(data.mode ?? "");
+    const modeLabel =
+      MODE_LABELS[mode] ||
+      (kind === "video" ? "视频" : mode ? mode : "图片");
+    const prompt = String(data.prompt ?? "").replace(/\s+/g, " ").trim();
+    const snippet =
+      prompt.length > 28 ? `${prompt.slice(0, 28)}…` : prompt;
+    const provider = providerLabel(String(data.provider ?? ""));
+    const parts = [modeLabel];
+    if (snippet) parts.push(snippet);
+    else if (provider) parts.push(provider);
+    return parts.join(" · ");
+  } catch {
+    return text.length > 48 ? `${text.slice(0, 48)}…` : text;
+  }
+}
+
 function mapAsset(raw: Record<string, unknown>): AssetItem {
   const tone = String(raw.tone ?? "a");
   const kind = String(raw.kind) === "video" ? "video" : "image";
@@ -59,7 +102,7 @@ function mapAsset(raw: Record<string, unknown>): AssetItem {
     id: String(raw.id),
     name: String(raw.name),
     kind,
-    meta: String(raw.meta ?? ""),
+    meta: formatAssetMetaLabel(raw.meta, kind),
     tone: tone as AssetItem["tone"],
     url: resolveMediaUrl(raw.url != null ? String(raw.url) : undefined),
     thumbUrl: resolveMediaUrl(
@@ -76,6 +119,12 @@ function mapAsset(raw: Record<string, unknown>): AssetItem {
           ? String(raw.mime_type)
           : undefined,
     previewKind,
+    parentAssetId:
+      raw.parentAssetId != null
+        ? String(raw.parentAssetId)
+        : raw.parent_asset_id != null
+          ? String(raw.parent_asset_id)
+          : undefined,
   };
 }
 

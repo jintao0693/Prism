@@ -6,9 +6,9 @@ import json
 import uuid
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -21,7 +21,9 @@ from app.schemas.conversation import (
     ChatMessageOut,
     CompactOut,
     ConversationCreate,
+    ConversationDetailOut,
     ConversationSummaryOut,
+    ConversationUpdate,
     GenerationResultOut,
     SendMessageRequest,
 )
@@ -34,6 +36,7 @@ from app.services.agent.compact import (
 from app.services.agent.context import load_prior_messages
 from app.services.agent.deps import PrismDeps
 from app.services.agent.streaming import encode_sse, iter_agent_events
+from app.services.agent.title import is_placeholder_title, title_from_brief
 from app.services.media.gateway import MediaGateway
 from app.services.providers.registry import build_volcengine_client
 
@@ -80,21 +83,19 @@ async def _msg_out(db: AsyncSession, message: Message) -> ChatMessageOut:
 
 @router.get("", response_model=list[ConversationSummaryOut])
 async def list_conversations(
+    q: str | None = Query(default=None, description="按标题模糊筛选"),
     ctx: RequestContext = Depends(require_workspace),
     db: AsyncSession = Depends(get_db),
 ) -> list[ConversationSummaryOut]:
     """会话列表。"""
     assert ctx.workspace_id
-    rows = (
-        await db.scalars(
-            select(Conversation)
-            .where(
-                Conversation.tenant_id == ctx.tenant_id,
-                Conversation.workspace_id == ctx.workspace_id,
-            )
-            .order_by(Conversation.updated_at.desc()),
-        )
-    ).all()
+    stmt = select(Conversation).where(
+        Conversation.tenant_id == ctx.tenant_id,
+        Conversation.workspace_id == ctx.workspace_id,
+    )
+    if q and q.strip():
+        stmt = stmt.where(Conversation.title.ilike(f"%{q.strip()}%"))
+    rows = (await db.scalars(stmt.order_by(Conversation.updated_at.desc()))).all()
 
     tones = ["a", "b", "c"]
     out: list[ConversationSummaryOut] = []
@@ -109,6 +110,65 @@ async def list_conversations(
             ),
         )
     return out
+
+
+@router.get("/{conversation_id}", response_model=ConversationDetailOut)
+async def get_conversation(
+    conversation_id: str,
+    ctx: RequestContext = Depends(require_workspace),
+    db: AsyncSession = Depends(get_db),
+) -> ConversationDetailOut:
+    """会话详情（含压缩检查点）。"""
+    conv = await db.get(Conversation, conversation_id)
+    if not conv or conv.tenant_id != ctx.tenant_id or conv.workspace_id != ctx.workspace_id:
+        raise HTTPException(status_code=404, detail="会话不存在")
+    return ConversationDetailOut(
+        id=conv.id,
+        title=conv.title,
+        kind=conv.kind,
+        updatedAtLabel=conv.updated_at.astimezone(UTC).strftime("%Y-%m-%d %H:%M"),
+        summaryText=conv.summary_text,
+        compactGeneration=int(conv.compact_generation or 0),
+        contextTokensEstimate=int(conv.context_tokens_estimate or 0),
+    )
+
+
+@router.patch("/{conversation_id}", response_model=ConversationSummaryOut)
+async def update_conversation(
+    conversation_id: str,
+    body: ConversationUpdate,
+    ctx: RequestContext = Depends(require_workspace),
+    db: AsyncSession = Depends(get_db),
+) -> ConversationSummaryOut:
+    """重命名会话。"""
+    conv = await db.get(Conversation, conversation_id)
+    if not conv or conv.tenant_id != ctx.tenant_id or conv.workspace_id != ctx.workspace_id:
+        raise HTTPException(status_code=404, detail="会话不存在")
+    conv.title = body.title
+    conv.updated_at = datetime.now(UTC)
+    await db.commit()
+    return ConversationSummaryOut(
+        id=conv.id,
+        title=conv.title,
+        kind=conv.kind,
+        updatedAtLabel=conv.updated_at.astimezone(UTC).strftime("%Y-%m-%d %H:%M"),
+        thumbTone="a",
+    )
+
+
+@router.delete("/{conversation_id}")
+async def delete_conversation(
+    conversation_id: str,
+    ctx: RequestContext = Depends(require_workspace),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """删除会话（级联消息）。"""
+    conv = await db.get(Conversation, conversation_id)
+    if not conv or conv.tenant_id != ctx.tenant_id or conv.workspace_id != ctx.workspace_id:
+        raise HTTPException(status_code=404, detail="会话不存在")
+    await db.delete(conv)
+    await db.commit()
+    return {"ok": True}
 
 
 @router.post("", response_model=ConversationSummaryOut)
@@ -226,6 +286,19 @@ async def send_message(
     db.add(user_msg)
     await db.flush()
 
+    prior_count = await db.scalar(
+        select(func.count())
+        .select_from(Message)
+        .where(
+            Message.conversation_id == conversation_id,
+            Message.id != user_msg.id,
+        ),
+    )
+    renamed_title: str | None = None
+    if int(prior_count or 0) == 0 and is_placeholder_title(conv.title):
+        renamed_title = title_from_brief(body.content)
+        conv.title = renamed_title
+
     ark = await build_volcengine_client(db, ctx.tenant_id)
     # 发消息前：usage / 窗口过大则自动压缩（不含本轮）
     compact_result = await maybe_auto_compact(
@@ -258,6 +331,16 @@ async def send_message(
     )
 
     async def event_stream():
+        if renamed_title:
+            yield encode_sse(
+                {
+                    "type": "conversation.updated",
+                    "data": {
+                        "id": conversation_id,
+                        "title": renamed_title,
+                    },
+                },
+            )
         if compact_result.did_compact:
             yield encode_sse(
                 {
@@ -296,6 +379,14 @@ async def send_message(
             completion_tokens=deps.last_completion_tokens,
             total_tokens=deps.last_total_tokens,
         )
+        # 有媒体结果时更新会话类型，便于侧栏识别
+        for card in results:
+            kind = str((card or {}).get("kind") or "")
+            if kind == "video":
+                conv.kind = "video"
+                break
+            if kind == "image" and conv.kind == "chat":
+                conv.kind = "image"
         conv.updated_at = datetime.now(UTC)
         await db.commit()
 

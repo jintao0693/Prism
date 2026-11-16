@@ -1,7 +1,11 @@
 .composer {
+  flex-shrink: 0;
   border-top: 1px solid var(--line);
-  padding: 14px 16px 16px;
+  padding: 12px 16px 12px;
   background: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .box {
@@ -71,6 +75,7 @@
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  min-width: 0;
 }
 
 .chip {
@@ -99,9 +104,127 @@
   color: var(--accent);
 }
 
+.quotaHint {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--warn-text);
+  background: var(--warn-soft);
+  border-radius: 10px;
+  padding: 6px 10px;
+}
+
 .hint {
   margin: 0;
   font-size: 11px;
   color: var(--muted);
   line-height: 1.45;
+}
+
+.metaLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  flex-shrink: 0;
+}
+
+.kbCount {
+  font-style: normal;
+  font-weight: 500;
+  font-size: 11px;
+  color: var(--accent);
+  background: var(--accent-soft);
+  padding: 1px 6px;
+  border-radius: 999px;
+}
+
+.refRow,
+.kbRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.refChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px 4px 4px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #f7faf9;
+  font-size: 12px;
+  color: var(--ink-soft);
+  max-width: 220px;
+}
+
+.refChip img {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.refChip span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.refChip button {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.kbPill,
+.kbPillOn {
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  cursor: pointer;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink-soft);
+}
+
+.kbPill:hover:not(:disabled) {
+  border-color: #9bb8b5;
+  color: var(--ink);
+}
+
+.kbPillOn {
+  border-color: #9bb8b5;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.kbPill:disabled,
+.kbPillOn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.kbEmpty {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.kbEmpty a {
+  color: var(--accent);
+  font-weight: 500;
 }

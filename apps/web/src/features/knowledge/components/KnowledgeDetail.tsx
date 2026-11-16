@@ -438,7 +438,12 @@ export default function KnowledgeDetail({
               </Panel>
             ) : null}
             {hits.map((hit) => (
-              <HitCard key={hit.id} hit={hit} />
+              <HitCard
+                key={hit.id}
+                hit={hit}
+                workspaceId={workspaceId}
+                kbName={kb.name}
+              />
             ))}
           </div>
 
@@ -500,7 +505,41 @@ export default function KnowledgeDetail({
   );
 }
 
-function HitCard({ hit }: { hit: KnowledgeHit }) {
+function HitCard({
+  hit,
+  workspaceId,
+  kbName,
+}: {
+  hit: KnowledgeHit;
+  workspaceId: string;
+  kbName: string;
+}) {
+  const [busy, setBusy] = useState(false);
+
+  async function sendToChat() {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const { createConversation } = await import("@/features/chat");
+      const { stashComposerDraft } = await import("@/lib/pending-draft");
+      const draft = [
+        `请基于知识库「${kbName}」中的资料回答 / 创作：`,
+        `标题：${hit.title}`,
+        hit.summary ? `摘要：${hit.summary}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+      stashComposerDraft(workspaceId, draft);
+      const created = await createConversation(
+        workspaceId,
+        hit.title.slice(0, 28) || "知识库创作",
+      );
+      window.location.href = routes.chatConversation(workspaceId, created.id);
+    } catch {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className={styles.hit}>
       {hit.thumbUrl || hit.url ? (
@@ -524,6 +563,14 @@ function HitCard({ hit }: { hit: KnowledgeHit }) {
             {hit.itemType === "image" ? "图片" : "文档"}
           </span>
         ) : null}
+        <button
+          type="button"
+          className={styles.sendBtn}
+          disabled={busy}
+          onClick={() => void sendToChat()}
+        >
+          {busy ? "跳转中…" : "带回对话"}
+        </button>
       </div>
     </div>
   );

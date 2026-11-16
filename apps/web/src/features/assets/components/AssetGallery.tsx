@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import PageHeader from "@/components/ui/PageHeader";
 import Button from "@/components/ui/Button";
 import MediaPreview from "@/components/media/MediaPreview";
+import MediaLightbox from "@/components/media/MediaLightbox";
 import { listAssets, uploadAsset } from "@/features/assets";
 import { createConversation } from "@/features/chat";
 import { stashPendingReferences } from "@/lib/pending-refs";
@@ -28,6 +29,7 @@ export default function AssetGallery({
   const [filter, setFilter] = useState<Filter>("all");
   const [assets, setAssets] = useState(initialAssets);
   const [error, setError] = useState<string | null>(null);
+  const [preview, setPreview] = useState<AssetItem | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [sendingId, setSendingId] = useState<string | null>(null);
@@ -176,9 +178,23 @@ export default function AssetGallery({
         {assets.map((asset) => {
           const canSend =
             asset.kind === "image" || asset.previewKind === "poster";
+          const parent = asset.parentAssetId
+            ? assets.find((a) => a.id === asset.parentAssetId)
+            : undefined;
+          const lineage = asset.parentAssetId
+            ? parent
+              ? `基于「${parent.name}」改稿`
+              : `基于 ${asset.parentAssetId.slice(0, 10)}… 改稿`
+            : null;
           return (
             <article key={asset.id} className={styles.asset}>
-              <div className={styles.mediaWrap}>
+              <button
+                type="button"
+                className={styles.mediaWrap}
+                onClick={() => {
+                  if (asset.url || asset.thumbUrl) setPreview(asset);
+                }}
+              >
                 {asset.url || asset.thumbUrl ? (
                   <MediaPreview
                     url={asset.url}
@@ -189,7 +205,7 @@ export default function AssetGallery({
                     alt={asset.name}
                     className={styles.mediaImg}
                     preferThumb
-                    controls={asset.previewKind === "video"}
+                    controls={false}
                   />
                 ) : (
                   <div className={cn(styles.media, `thumb-${asset.tone}`)} />
@@ -199,10 +215,11 @@ export default function AssetGallery({
                     {asset.previewKind === "poster" ? "视频海报" : "视频"}
                   </span>
                 ) : null}
-              </div>
+              </button>
               <div className={styles.cap}>
                 <strong>{asset.name}</strong>
                 <span>{asset.meta}</span>
+                {lineage ? <em className={styles.lineage}>{lineage}</em> : null}
                 {canSend ? (
                   <button
                     type="button"
@@ -220,6 +237,22 @@ export default function AssetGallery({
           );
         })}
       </div>
+
+      <MediaLightbox
+        open={Boolean(preview)}
+        onClose={() => setPreview(null)}
+        url={preview?.url}
+        thumbUrl={preview?.thumbUrl}
+        kind={preview?.kind}
+        previewKind={preview?.previewKind}
+        mimeType={preview?.mimeType}
+        title={preview?.name}
+        lineageLabel={
+          preview?.parentAssetId
+            ? `基于 ${preview.parentAssetId.slice(0, 10)}… 改稿`
+            : null
+        }
+      />
     </div>
   );
 }

@@ -68,6 +68,26 @@ class ConversationCreate(BaseModel):
     kind: str = "chat"
 
 
+class ConversationUpdate(BaseModel):
+    """更新会话（重命名等）。"""
+
+    title: str = Field(min_length=1, max_length=255)
+
+
+class ConversationDetailOut(BaseModel):
+    """会话详情（含压缩检查点）。"""
+
+    id: str
+    title: str
+    kind: str
+    updated_at_label: str = Field(alias="updatedAtLabel")
+    summary_text: str | None = Field(default=None, alias="summaryText")
+    compact_generation: int = Field(alias="compactGeneration", default=0)
+    context_tokens_estimate: int = Field(alias="contextTokensEstimate", default=0)
+
+    model_config = {"populate_by_name": True}
+
+
 class CompactOut(BaseModel):
     """手动 / 自动压缩结果。"""
 

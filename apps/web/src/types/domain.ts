@@ -56,6 +56,8 @@ export interface ChatMessage {
   createdAt: string;
   /** 前端流式气泡占位 */
   streaming?: boolean;
+  /** 本地乐观消息发送失败，保留内容可重试 */
+  failed?: boolean;
 }
 
 export interface KnowledgeBase {
@@ -99,9 +101,12 @@ export interface AssetItem {
   thumbUrl?: string;
   mimeType?: string;
   previewKind?: "image" | "video" | "poster";
+  parentAssetId?: string;
 }
 
 export interface UsageSummary {
   imagesThisMonth: number;
   videosThisMonth: number;
+  imagesSoftLimit?: number;
+  videosSoftLimit?: number;
 }

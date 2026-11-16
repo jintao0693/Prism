@@ -18,7 +18,9 @@
 | 多轮上下文 | ✅ 已上线 | 滑动窗 + 摘要检查点；usage 触发自动压缩；压缩后重注工作区/KB；手动 `POST .../compact` |
 | 多模态 Agent | ✅ 工具编排 | 统一 `tool_runner`：文/图生图、文/图生视频、KB；资产记忆；SSE 真流式 + `media.progress`；游戏向 3 案例已过 |
 | 多模态知识库 | ✅ 图片链路已通 | 入库/检索/以图搜图/补齐向量/批量上传；Postgres 走 pgvector，SQLite JSON 回退；视频片段仍未做 |
-| 页面表达 | 🔄 已纠偏 | 去掉假上传/夸大文案；对话显示意图进度并可勾选知识库 |
+| 页面表达 | ✅ 已纠偏 | 首页/对话文案对齐真能力；KB 在输入区下；lightbox / 血缘 / 会话治理 |
+| 任务中心 | ✅ 已上线 | 视频 GenerationJob + 侧栏入口；进程内 asyncio（Worker 仍待） |
+| 优化 backlog | ✅ 已成文 | 详见 [OPTIMIZATION.md](OPTIMIZATION.md) |
 | 火山方舟接入 | ✅ 代码完成 | Chat / Seedream / Seedance / Embedding；需自备 Key 验收 |
 | 开源基建 | ✅ 完成 | MIT、AUTHORS、CI、Issue/PR 模板、CONTRIBUTING 等 |
 | 首跑可用性 | ✅ 已合入 | CORS、密码盐、SSR URL、mock 默认值已推 main |
@@ -81,8 +83,9 @@
 1. ~~进度文档~~ → 本文  
 2. ~~多模态 P0 + 游戏向 3 案例联调~~ → [GAME_CASES.md](GAME_CASES.md)  
 3. Alembic 初始迁移（替代纯 `create_all`）  
-4. 联调体验：任务进度、错误文案、空状态  
-5. ~~README 案例配图 / 预告成片~~ → `docs/media/cases/`
+4. ~~联调体验：任务进度、错误文案、空状态~~ → 对话/任务中心已加强；生产部署仍待  
+5. ~~README 案例配图 / 预告成片~~ → `docs/media/cases/`  
+6. **下一刀优先三件**（详见 [OPTIMIZATION.md](OPTIMIZATION.md)）：生产部署、真 Worker 队列、结果快捷再创作  
 
 ### 多模态 Agent 下一步优化
 
@@ -93,20 +96,21 @@
 5. ~~用量按生成资产实算~~（侧栏 / 设置；上传不计）  
 6. ~~资产中心「送回对话」~~  
 7. 方舟原生 function call 多步规划  
-8. Chat Ark `stream=true` 真 token 增量  
-9. Seedream/Seedance 提示词编译器  
-10. 视频异步 Job + Worker  
+8. ~~Chat Ark `stream=true` 真 token 增量~~  
+9. ~~Seedream/Seedance 提示词编译器~~  
+10. 🔄 视频 Job 已落库 + 任务中心；**真 Worker / 队列**仍待  
+11. ~~会话 CRUD / 整理会话 / KB 带回 / lightbox / 血缘~~  
 
 ### Next（Phase 2 前）
 
-- 配额真实计量  
-- Worker / 队列从占位变为可选消费  
+- 生产 Docker / HTTPS / 备份（等服务器）  
+- 配额硬上限 + Worker 队列  
 - 更深健康检查（DB / Redis）  
 - pre-commit / dependabot  
 
 ### Later
 
-- 视频片段检索、社媒发布、巨量/Meta — 见 ROADMAP  
+- 视频片段检索、社媒发布、巨量/Meta — 见 ROADMAP 与 [OPTIMIZATION.md](OPTIMIZATION.md)  
 
 ---
 

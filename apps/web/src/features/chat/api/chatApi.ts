@@ -32,6 +32,15 @@ export type AgentProgress = {
   results?: GenerationResult[];
   done?: boolean;
   error?: string;
+  /** 首条 brief 自动命名后回传 */
+  conversationTitle?: string;
+  jobId?: string;
+};
+
+export type ConversationDetail = ConversationSummary & {
+  summaryText?: string | null;
+  compactGeneration?: number;
+  contextTokensEstimate?: number;
 };
 
 export type SendMessageOptions = {
@@ -145,6 +154,20 @@ function handleSseEvent(
 ): void {
   if (!onProgress) return;
 
+  if (event === "conversation.updated") {
+    const title = data.title != null ? String(data.title) : "";
+    if (title) {
+      onProgress({
+        intent: state.intent,
+        intentSource: state.intentSource,
+        status: `已命名会话：${title}`,
+        conversationTitle: title,
+        content: state.content,
+        results: state.results,
+      });
+    }
+    return;
+  }
   if (event === "intent.resolved") {
     state.intent = String(data.intent ?? "");
     state.intentSource = String(data.source ?? "");
@@ -193,26 +216,47 @@ function handleSseEvent(
   if (event === "tool.start") {
     const name = String(data.name ?? "tool");
     state.toolLabel = name;
+    const hint = data.hint != null ? String(data.hint) : "";
+    const note = data.note != null ? String(data.note) : "";
+    const jobId = data.jobId != null ? String(data.jobId) : undefined;
+    const waitHint =
+      hint ||
+      note ||
+      (name.includes("video")
+        ? "视频通常需 1–3 分钟，请稍候"
+        : name.includes("image")
+          ? "生图通常需 10–40 秒"
+          : "");
     onProgress({
       intent: state.intent,
       intentSource: state.intentSource,
-      status: `正在执行：${name}`,
+      status: waitHint ? `正在执行：${name} · ${waitHint}` : `正在执行：${name}`,
       toolLabel: state.toolLabel,
       content: state.content,
       results: state.results,
+      jobId,
     });
     return;
   }
   if (event === "media.progress") {
     const status = String(data.status ?? "running");
     const elapsed = Number(data.elapsedSec ?? 0);
+    const hint = data.hint != null ? String(data.hint) : "";
+    const jobId = data.jobId != null ? String(data.jobId) : undefined;
+    const elapsedLabel =
+      elapsed >= 60
+        ? ` · ${Math.floor(elapsed / 60)}分${Math.round(elapsed % 60)}秒`
+        : elapsed
+          ? ` · ${elapsed}s`
+          : "";
     onProgress({
       intent: state.intent,
       intentSource: state.intentSource,
-      status: `视频任务 ${status}${elapsed ? ` · ${elapsed}s` : ""}`,
+      status: `视频任务 ${status}${elapsedLabel}${hint ? ` · ${hint}` : ""}`,
       toolLabel: state.toolLabel,
       content: state.content,
       results: state.results,
+      jobId,
     });
     return;
   }
@@ -353,17 +397,131 @@ async function consumeSseStream(
 
 export async function listConversations(
   workspaceId: string,
+  opts?: { q?: string },
 ): Promise<ConversationSummary[]> {
   if (USE_MOCK) {
     await mockDelay();
-    return CONVERSATIONS;
+    const q = (opts?.q || "").trim().toLowerCase();
+    if (!q) return CONVERSATIONS;
+    return CONVERSATIONS.filter((c) => c.title.toLowerCase().includes(q));
   }
+  const qs = opts?.q?.trim()
+    ? `?q=${encodeURIComponent(opts.q.trim())}`
+    : "";
   const raw = await apiRequest<Record<string, unknown>[]>(
-    "/conversations",
+    `/conversations${qs}`,
     {},
     { workspaceId },
   );
   return raw.map(mapConversation);
+}
+
+export async function getConversationDetail(
+  conversationId: string,
+  workspaceId: string,
+): Promise<ConversationDetail> {
+  if (USE_MOCK) {
+    await mockDelay(100);
+    const base = CONVERSATIONS.find((c) => c.id === conversationId) ?? {
+      id: conversationId,
+      title: "新对话",
+      kind: "chat" as const,
+      updatedAtLabel: "刚刚",
+      thumbTone: "a" as const,
+    };
+    return { ...base, summaryText: null, compactGeneration: 0 };
+  }
+  const raw = await apiRequest<Record<string, unknown>>(
+    `/conversations/${conversationId}`,
+    {},
+    { workspaceId },
+  );
+  return {
+    ...mapConversation(raw),
+    summaryText:
+      raw.summaryText != null
+        ? String(raw.summaryText)
+        : raw.summary_text != null
+          ? String(raw.summary_text)
+          : null,
+    compactGeneration: Number(
+      raw.compactGeneration ?? raw.compact_generation ?? 0,
+    ),
+    contextTokensEstimate: Number(
+      raw.contextTokensEstimate ?? raw.context_tokens_estimate ?? 0,
+    ),
+  };
+}
+
+export async function renameConversation(
+  conversationId: string,
+  workspaceId: string,
+  title: string,
+): Promise<ConversationSummary> {
+  if (USE_MOCK) {
+    await mockDelay(150);
+    const row = CONVERSATIONS.find((c) => c.id === conversationId);
+    if (row) row.title = title;
+    return row ?? mapConversation({ id: conversationId, title, kind: "chat" });
+  }
+  const raw = await apiRequest<Record<string, unknown>>(
+    `/conversations/${conversationId}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ title }),
+    },
+    { workspaceId },
+  );
+  return mapConversation(raw);
+}
+
+export async function deleteConversation(
+  conversationId: string,
+  workspaceId: string,
+): Promise<void> {
+  if (USE_MOCK) {
+    await mockDelay(150);
+    const idx = CONVERSATIONS.findIndex((c) => c.id === conversationId);
+    if (idx >= 0) CONVERSATIONS.splice(idx, 1);
+    delete MESSAGES[conversationId];
+    return;
+  }
+  await apiRequest(
+    `/conversations/${conversationId}`,
+    { method: "DELETE" },
+    { workspaceId },
+  );
+}
+
+export async function compactConversation(
+  conversationId: string,
+  workspaceId: string,
+): Promise<{
+  didCompact: boolean;
+  generation: number;
+  summaryChars: number;
+  reason: string;
+}> {
+  if (USE_MOCK) {
+    await mockDelay(300);
+    return {
+      didCompact: true,
+      generation: 1,
+      summaryChars: 120,
+      reason: "mock",
+    };
+  }
+  const raw = await apiRequest<Record<string, unknown>>(
+    `/conversations/${conversationId}/compact`,
+    { method: "POST" },
+    { workspaceId },
+  );
+  return {
+    didCompact: Boolean(raw.didCompact ?? raw.did_compact),
+    generation: Number(raw.generation ?? 0),
+    summaryChars: Number(raw.summaryChars ?? raw.summary_chars ?? 0),
+    reason: String(raw.reason ?? ""),
+  };
 }
 
 export async function createConversation(

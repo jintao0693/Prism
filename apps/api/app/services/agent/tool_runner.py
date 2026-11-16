@@ -151,21 +151,42 @@ async def run_tool_agent(
         )
 
     if ark and ark.chat_model:
+        from app.services.providers.volcengine.client import ChatCompletionResult
+
         messages, stats = assemble_chat_messages(
             system=system,
             history=history,
             latest_user=latest,
         )
         yield {"type": "context.ready", "data": stats}
-        yield {"type": "text.delta", "data": {"text": ""}}
-        result = await ark.chat_completion(messages)
-        deps.last_prompt_tokens = result.prompt_tokens
-        deps.last_completion_tokens = result.completion_tokens
-        deps.last_total_tokens = result.total_tokens
-        yield {"type": "text.delta", "data": {"text": result.content}}
+        assembled = ""
+        try:
+            async for piece in ark.chat_completion_stream(messages):
+                if isinstance(piece, ChatCompletionResult):
+                    deps.last_prompt_tokens = piece.prompt_tokens
+                    deps.last_completion_tokens = piece.completion_tokens
+                    deps.last_total_tokens = piece.total_tokens
+                    if piece.content and not assembled:
+                        assembled = piece.content
+                    continue
+                if isinstance(piece, str) and piece:
+                    assembled += piece
+                    yield {"type": "text.delta", "data": {"text": piece}}
+        except Exception as exc:
+            from app.services.media.prompt_compiler import format_ark_error
+
+            err = f"对话失败：{format_ark_error(exc)}"
+            yield {"type": "text.delta", "data": {"text": err}}
+            yield {
+                "type": "message.done",
+                "data": {"content": err, "results": deps.generated_assets},
+            }
+            return
+        if not assembled:
+            assembled = "（模型未返回文本）"
         yield {
             "type": "message.done",
-            "data": {"content": result.content, "results": deps.generated_assets},
+            "data": {"content": assembled, "results": deps.generated_assets},
         }
         return
 
@@ -229,8 +250,13 @@ async def _run_image_tool(
     mode: str,
     parent: Asset | None,
 ) -> AsyncIterator[dict[str, Any]]:
+    from app.services.media.prompt_compiler import format_ark_error
+
     tool_name = mode
-    yield {"type": "tool.start", "data": {"name": tool_name}}
+    yield {
+        "type": "tool.start",
+        "data": {"name": tool_name, "hint": "生图通常需要 10–40 秒，请稍候"},
+    }
     image_bytes = None
     parent_id = None
     if mode == "image_to_image" and parent:
@@ -244,18 +270,38 @@ async def _run_image_tool(
                 "data": {"name": tool_name, "note": "上一张图文件缺失，回退文生图"},
             }
 
-    asset_id, result, key = await deps.media.generate_image(
-        tenant_id=deps.tenant_id,
-        workspace_id=deps.workspace_id,
-        prompt=user_text,
-        mode=mode,
-        image_bytes=image_bytes,
-    )
+    try:
+        asset_id, result, key = await deps.media.generate_image(
+            tenant_id=deps.tenant_id,
+            workspace_id=deps.workspace_id,
+            prompt=user_text,
+            mode=mode,
+            image_bytes=image_bytes,
+        )
+    except Exception as exc:
+        friendly = format_ark_error(exc)
+        err = f"生图失败：{friendly}"
+        yield {
+            "type": "tool.result",
+            "data": {"name": tool_name, "error": friendly},
+        }
+        yield {"type": "text.delta", "data": {"text": err}}
+        yield {
+            "type": "message.done",
+            "data": {"content": err, "toolLabel": f"{tool_name} · 失败", "results": []},
+        }
+        return
+
+    compiled = deps.media.last_compiled
     meta = dumps_asset_meta(
         prompt=user_text,
         mode=mode,
         parent_asset_id=parent_id,
         provider=deps.media.provider.name,
+        extra={
+            "compiled_prompt": (compiled.text[:800] if compiled else ""),
+            "compiler": compiled.extras if compiled else {},
+        },
     )
     asset = Asset(
         id=asset_id,
@@ -320,8 +366,10 @@ async def _run_video_tool(
     mode: str,
     parent: Asset | None,
 ) -> AsyncIterator[dict[str, Any]]:
+    from app.services.media.preview import asset_preview_fields
+    from app.services.media.video_jobs import get_job_snapshot, start_video_job
+
     tool_name = mode
-    yield {"type": "tool.start", "data": {"name": tool_name}}
     image_bytes = None
     parent_id = None
     if mode == "image_to_video" and parent:
@@ -331,45 +379,64 @@ async def _run_video_tool(
             mode = "text_to_video"
             tool_name = "text_to_video"
 
-    queue: asyncio.Queue[dict[str, Any] | None] = asyncio.Queue()
+    job_id = await start_video_job(
+        tenant_id=deps.tenant_id,
+        workspace_id=deps.workspace_id,
+        conversation_id=deps.conversation_id,
+        prompt=user_text,
+        mode=mode,
+        image_bytes=image_bytes,
+        parent_id=parent_id,
+    )
+    yield {
+        "type": "tool.start",
+        "data": {
+            "name": tool_name,
+            "jobId": job_id,
+            "hint": "视频任务通常 1–3 分钟，进度会实时更新",
+        },
+    }
 
-    async def on_progress_q(status: str, elapsed: float, task_id: str) -> None:
-        await queue.put(
-            {
+    hint = "请勿关闭页面，完成后会自动写入资产中心"
+    last_status = ""
+    last_elapsed = -1.0
+    while True:
+        snap = await get_job_snapshot(job_id)
+        if not snap:
+            await asyncio.sleep(1.5)
+            continue
+        status = snap.get("progressStatus") or ""
+        elapsed = float(snap.get("progressElapsed") or 0)
+        task_id = snap.get("externalTaskId") or ""
+        job_status = snap["status"]
+
+        if status != last_status or abs(elapsed - last_elapsed) >= 0.5:
+            last_status = status
+            last_elapsed = elapsed
+            yield {
                 "type": "media.progress",
                 "data": {
                     "status": status,
                     "elapsedSec": round(elapsed, 1),
                     "taskId": task_id,
+                    "jobId": job_id,
                     "kind": "video",
+                    "hint": hint,
                 },
-            },
-        )
+            }
 
-    async def _produce() -> tuple[str, Any, str]:
-        try:
-            return await deps.media.generate_video(
-                tenant_id=deps.tenant_id,
-                workspace_id=deps.workspace_id,
-                prompt=user_text,
-                mode=mode,
-                image_bytes=image_bytes,
-                on_progress=on_progress_q,
-            )
-        finally:
-            await queue.put(None)
-
-    task = asyncio.create_task(_produce())
-    while True:
-        item = await queue.get()
-        if item is None:
+        if job_status in {"succeeded", "failed"}:
             break
-        yield item
-    try:
-        asset_id, result, key = await task
-    except Exception as exc:
-        err = f"视频生成失败：{exc}"
-        yield {"type": "tool.result", "data": {"name": tool_name, "error": str(exc)}}
+        await asyncio.sleep(1.5)
+
+    snap = await get_job_snapshot(job_id)
+    if not snap or snap["status"] == "failed":
+        friendly = (snap or {}).get("errorMessage") or "未知错误"
+        err = f"视频生成失败：{friendly}"
+        yield {
+            "type": "tool.result",
+            "data": {"name": tool_name, "error": friendly},
+        }
         yield {"type": "text.delta", "data": {"text": err}}
         yield {
             "type": "message.done",
@@ -377,31 +444,27 @@ async def _run_video_tool(
         }
         return
 
-    meta = dumps_asset_meta(
-        prompt=user_text,
-        mode=mode,
-        parent_asset_id=parent_id,
-        provider=deps.media.provider.name,
-    )
-    asset = Asset(
-        id=asset_id,
-        tenant_id=deps.tenant_id,
-        workspace_id=deps.workspace_id,
-        name=result.filename,
-        kind="video",
-        storage_key=key,
-        mime_type=result.mime_type,
-        meta=meta,
-        source_conversation_id=deps.conversation_id,
-    )
-    deps.db.add(asset)
-    from app.services.media.preview import asset_preview_fields
+    asset_id = snap.get("resultAssetId") or ""
+    asset = await deps.db.get(Asset, asset_id) if asset_id else None
+    if not asset:
+        err = "视频生成失败：资产未找到"
+        yield {
+            "type": "tool.result",
+            "data": {"name": tool_name, "error": err},
+        }
+        yield {"type": "text.delta", "data": {"text": err}}
+        yield {
+            "type": "message.done",
+            "data": {"content": err, "toolLabel": f"{tool_name} · 失败", "results": []},
+        }
+        return
 
+    effective_mode = snap.get("mode") or mode
     preview = asset_preview_fields(asset)
     url = preview["url"]
     card = {
         "id": asset_id,
-        "label": "图生视频" if mode == "image_to_video" else "生视频",
+        "label": "图生视频" if effective_mode == "image_to_video" else "生视频",
         "tone": "c",
         "kind": "video",
         "url": url,
@@ -411,10 +474,13 @@ async def _run_video_tool(
         "parentAssetId": parent_id,
     }
     deps.generated_assets.append(card)
-    await deps.db.flush()
-    from app.services.quota.usage import record_media_generation
+    provider_name = ""
+    try:
+        from app.services.agent.asset_memory import loads_asset_meta
 
-    await record_media_generation(deps.db, deps.tenant_id, kind="video")
+        provider_name = str(loads_asset_meta(asset.meta).get("provider") or "")
+    except Exception:
+        provider_name = ""
     yield {
         "type": "tool.result",
         "data": {
@@ -425,8 +491,9 @@ async def _run_video_tool(
         },
     }
     content = (
-        f"已完成{'图生视频' if mode == 'image_to_video' else '视频生成'}"
-        f"（{deps.media.provider.name}），可在资产中心查看。"
+        f"已完成{'图生视频' if effective_mode == 'image_to_video' else '视频生成'}"
+        + (f"（{provider_name}）" if provider_name else "")
+        + "，可在资产中心查看。"
     )
     yield {"type": "text.delta", "data": {"text": content}}
     yield {

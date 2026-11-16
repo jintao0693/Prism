@@ -17,5 +17,6 @@ export const routes = {
   knowledgeDetail: (workspaceId: string, kbId: string) =>
     `/w/${workspaceId}/knowledge/${kbId}`,
   assets: (workspaceId: string) => `/w/${workspaceId}/assets`,
+  jobs: (workspaceId: string) => `/w/${workspaceId}/jobs`,
   settings: (workspaceId: string) => `/w/${workspaceId}/settings`,
 } as const;

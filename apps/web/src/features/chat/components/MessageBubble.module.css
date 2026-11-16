@@ -49,6 +49,32 @@
   border-bottom-left-radius: 6px;
 }
 
+.failed {
+  border: 1px solid #fecdca;
+  background: #fff8f7;
+  color: var(--ink);
+}
+
+.failRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 10px;
+  font-size: 12px;
+  color: #b42318;
+}
+
+.retryBtn {
+  border: 1px solid #fecdca;
+  background: #fff;
+  color: #b42318;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
 .tool {
   display: inline-flex;
   align-items: center;
@@ -77,6 +103,9 @@
   position: relative;
   overflow: hidden;
   background: var(--canvas);
+  padding: 0;
+  cursor: zoom-in;
+  text-align: left;
 }
 
 .resultImg {
@@ -96,6 +125,22 @@
   background: rgba(255, 255, 255, 0.88);
   color: var(--ink-soft);
   font-weight: 600;
+}
+
+.lineageBadge {
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  right: 8px;
+  font-size: 10px;
+  font-style: normal;
+  padding: 3px 6px;
+  border-radius: 8px;
+  background: rgba(15, 18, 24, 0.72);
+  color: #f4f6f8;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 @media (max-width: 720px) {

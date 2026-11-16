@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from typing import Any
 
@@ -147,6 +149,73 @@ class VolcengineArkClient:
             temperature=temperature,
         )
         return result.content
+
+    async def chat_completion_stream(
+        self,
+        messages: list[dict[str, str]],
+        *,
+        model: str | None = None,
+        temperature: float = 0.7,
+    ) -> AsyncIterator[str | ChatCompletionResult]:
+        """
+        流式对话：yield 文本增量（str），结束时 yield ChatCompletionResult（含 usage）。
+        """
+        model_id = model or self.chat_model
+        if not model_id:
+            raise VolcengineArkError("未配置对话模型 ID（chat_model）")
+
+        url = f"{self.base_url}/chat/completions"
+        body = {
+            "model": model_id,
+            "messages": messages,
+            "temperature": temperature,
+            "stream": True,
+            "stream_options": {"include_usage": True},
+        }
+        pieces: list[str] = []
+        usage: dict[str, Any] = {}
+
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
+            async with client.stream(
+                "POST",
+                url,
+                headers=self._headers(),
+                json=body,
+            ) as resp:
+                if resp.status_code >= 400:
+                    text = (await resp.aread()).decode("utf-8", errors="replace")[:500]
+                    raise VolcengineArkError(f"方舟接口错误 {resp.status_code}: {text}")
+                async for line in resp.aiter_lines():
+                    if not line:
+                        continue
+                    if line.startswith(":"):
+                        continue
+                    if not line.startswith("data:"):
+                        continue
+                    payload = line[5:].strip()
+                    if payload == "[DONE]":
+                        break
+                    try:
+                        chunk = json.loads(payload)
+                    except Exception:
+                        continue
+                    if chunk.get("usage"):
+                        usage = chunk["usage"] or {}
+                    choices = chunk.get("choices") or []
+                    if not choices:
+                        continue
+                    delta = choices[0].get("delta") or {}
+                    piece = delta.get("content")
+                    if isinstance(piece, str) and piece:
+                        pieces.append(piece)
+                        yield piece
+
+        yield ChatCompletionResult(
+            content="".join(pieces),
+            prompt_tokens=_as_int(usage.get("prompt_tokens")),
+            completion_tokens=_as_int(usage.get("completion_tokens")),
+            total_tokens=_as_int(usage.get("total_tokens")),
+        )
 
     # ---------- 生图 ----------
     async def generate_image(

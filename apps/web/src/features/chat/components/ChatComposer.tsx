@@ -1,6 +1,12 @@
 "use client";
 
-import { useRef, useState, type FormEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 import Button from "@/components/ui/Button";
 import styles from "./ChatComposer.module.css";
 
@@ -16,21 +22,58 @@ export type ComposerAttachment = {
   previewUrl: string;
 };
 
+export type ComposerKbOption = {
+  id: string;
+  name: string;
+};
+
+export type ComposerPendingRef = {
+  id: string;
+  name: string;
+  thumbUrl?: string;
+  url?: string;
+};
+
 export interface ChatComposerProps {
   disabled?: boolean;
   statusText?: string | null;
+  quotaHint?: string | null;
+  /** 外部注入草稿（失败重试 / 知识库带回） */
+  draftText?: string | null;
+  draftNonce?: number;
   onSend: (text: string, attachments: File[]) => Promise<void> | void;
+  knowledgeBases?: ComposerKbOption[];
+  selectedKbIds?: string[];
+  onToggleKb?: (id: string) => void;
+  pendingRefs?: ComposerPendingRef[];
+  onRemovePendingRef?: (id: string) => void;
+  kbEmptyHint?: ReactNode;
 }
 
 export default function ChatComposer({
   disabled,
   statusText,
+  quotaHint,
+  draftText,
+  draftNonce = 0,
   onSend,
+  knowledgeBases = [],
+  selectedKbIds = [],
+  onToggleKb,
+  pendingRefs = [],
+  onRemovePendingRef,
+  kbEmptyHint,
 }: ChatComposerProps) {
   const [value, setValue] = useState("");
   const [sending, setSending] = useState(false);
   const [attachments, setAttachments] = useState<ComposerAttachment[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (draftNonce > 0 && draftText != null) {
+      setValue(draftText);
+    }
+  }, [draftNonce, draftText]);
 
   function clearAttachments() {
     setAttachments((prev) => {
@@ -79,9 +122,32 @@ export default function ChatComposer({
   }
 
   const busy = sending || disabled;
+  const selectedCount = selectedKbIds.length;
 
   return (
     <form className={styles.composer} onSubmit={handleSubmit}>
+      {pendingRefs.length > 0 ? (
+        <div className={styles.refRow}>
+          <span className={styles.metaLabel}>待发送参考图</span>
+          {pendingRefs.map((ref) => (
+            <div key={ref.id} className={styles.refChip}>
+              {ref.thumbUrl || ref.url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={ref.thumbUrl || ref.url} alt={ref.name} />
+              ) : null}
+              <span>{ref.name}</span>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => onRemovePendingRef?.(ref.id)}
+              >
+                移除
+              </button>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
       <div className={styles.box}>
         {attachments.length > 0 ? (
           <div className={styles.previews}>
@@ -153,10 +219,42 @@ export default function ChatComposer({
           </Button>
         </div>
         {statusText ? <p className={styles.status}>{statusText}</p> : null}
-        <p className={styles.hint}>
-          可上传参考图做图生图 / 图生视频；勾选知识库后可走资料问答。失败时会显示可读错误，不会假装成功。
-        </p>
+        {quotaHint ? <p className={styles.quotaHint}>{quotaHint}</p> : null}
       </div>
+
+      <div className={styles.kbRow}>
+        <span className={styles.metaLabel}>
+          引用知识库
+          {selectedCount > 0 ? (
+            <em className={styles.kbCount}>已选 {selectedCount}</em>
+          ) : null}
+        </span>
+        {knowledgeBases.length === 0 ? (
+          <span className={styles.kbEmpty}>
+            {kbEmptyHint ?? "当前空间暂无知识库"}
+          </span>
+        ) : (
+          knowledgeBases.map((kb) => {
+            const on = selectedKbIds.includes(kb.id);
+            return (
+              <button
+                key={kb.id}
+                type="button"
+                className={on ? styles.kbPillOn : styles.kbPill}
+                disabled={busy || !onToggleKb}
+                aria-pressed={on}
+                onClick={() => onToggleKb?.(kb.id)}
+                title={kb.name}
+              >
+                {kb.name}
+              </button>
+            );
+          })
+        )}
+      </div>
+      <p className={styles.hint}>
+        勾选知识库后可走资料问答；生图约数十秒，视频约 1–3 分钟。
+      </p>
     </form>
   );
 }

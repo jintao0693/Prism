@@ -1,4 +1,5 @@
 import Link from "next/link";
+import MediaPreview from "@/components/media/MediaPreview";
 import Panel from "@/components/ui/Panel";
 import { routes } from "@/lib/routes";
 import type { AssetItem, ConversationSummary } from "@/types/domain";
@@ -20,15 +21,15 @@ export default function HomeDashboard({
       <section className={styles.hero}>
         <h2>今天创作什么？</h2>
         <p>
-          对话里直接描述需求：Prism 会自动识别意图，走文本问答、生图或生视频。
-          知识库目前支持文本检索 / 以文搜图；上传文件与真·以图搜图还在补。
+          对话里直接说需求：自动走问答、生图、生视频；可附参考图改稿或做成预告。
+          知识库已支持图片入库、文本检索、以文搜图、以图搜图；资产中心可送回对话继续改。
         </p>
         <div className={styles.quickRow}>
           <Link className={styles.quick} href={routes.chat(workspaceId)}>
             去创作对话
           </Link>
           <Link className={styles.quick} href={routes.knowledge(workspaceId)}>
-            打开知识库检索
+            打开知识库
           </Link>
           <Link className={styles.quick} href={routes.assets(workspaceId)}>
             查看资产中心
@@ -79,13 +80,34 @@ export default function HomeDashboard({
               <p className={styles.empty}>生成图/视频后会出现在这里。</p>
             ) : null}
             {assets.slice(0, 3).map((a) => (
-              <div key={a.id} className={styles.row}>
-                <span className={`thumb-${a.tone} ${styles.thumb}`} />
-                <span>
+              <Link
+                key={a.id}
+                href={routes.assets(workspaceId)}
+                className={styles.row}
+              >
+                <span className={`${styles.thumbBox} thumb-${a.tone}`}>
+                  {a.url || a.thumbUrl ? (
+                    <MediaPreview
+                      url={a.url}
+                      thumbUrl={a.thumbUrl}
+                      kind={a.kind}
+                      previewKind={a.previewKind}
+                      mimeType={a.mimeType}
+                      alt={a.name}
+                      className={styles.thumbMedia}
+                      preferThumb
+                      controls={false}
+                    />
+                  ) : null}
+                  {a.kind === "video" ? (
+                    <span className={styles.thumbBadge}>视频</span>
+                  ) : null}
+                </span>
+                <span className={styles.rowText}>
                   <strong>{a.name}</strong>
                   <span className={styles.meta}>{a.meta}</span>
                 </span>
-              </div>
+              </Link>
             ))}
           </div>
         </Panel>

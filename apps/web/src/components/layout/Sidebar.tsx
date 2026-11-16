@@ -48,6 +48,12 @@ export default function Sidebar({ workspaceId, usage }: SidebarProps) {
       icon: "▦",
       match: (p) => p.startsWith(routes.assets(workspaceId)),
     },
+    {
+      href: routes.jobs(workspaceId),
+      label: "任务中心",
+      icon: "◷",
+      match: (p) => p.startsWith(routes.jobs(workspaceId)),
+    },
   ];
 
   return (

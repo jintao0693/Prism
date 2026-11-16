@@ -276,6 +276,24 @@
   background: var(--canvas);
 }
 
+.sendBtn {
+  display: inline-block;
+  margin-top: 10px;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--accent);
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sendBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .itemGrid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
