@@ -38,6 +38,11 @@
   background: #fff;
 }
 
+.highlight {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .mediaWrap {
   position: relative;
   aspect-ratio: 1;

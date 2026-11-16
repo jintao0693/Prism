@@ -24,6 +24,14 @@
   background: #fafbfc;
 }
 
+.st_succeeded {
+  background: #f7faf9;
+}
+
+.st_failed {
+  background: #fff8f7;
+}
+
 .top {
   display: flex;
   justify-content: space-between;
@@ -31,13 +39,45 @@
   align-items: baseline;
 }
 
-.top strong {
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.titleRow strong {
   font-size: 14px;
+}
+
+.chip {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.chip_running,
+.chip_queued {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.chip_succeeded {
+  background: #e7f6ef;
+  color: #0f6e4f;
+}
+
+.chip_failed {
+  background: #fef3f2;
+  color: #b42318;
 }
 
 .time {
   font-size: 11px;
   color: var(--muted);
+  flex-shrink: 0;
 }
 
 .prompt {
@@ -47,8 +87,36 @@
   line-height: 1.5;
 }
 
+.progressBlock {
+  margin-top: 10px;
+}
+
+.barTrack {
+  height: 4px;
+  border-radius: 999px;
+  background: #e4e8ee;
+  overflow: hidden;
+}
+
+.barFill {
+  height: 100%;
+  width: 40%;
+  border-radius: 999px;
+  background: var(--accent);
+  animation: slide 1.2s ease-in-out infinite;
+}
+
+@keyframes slide {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(280%);
+  }
+}
+
 .progress {
-  margin: 8px 0 0;
+  margin: 6px 0 0;
   font-size: 12px;
   color: var(--accent);
 }
@@ -62,6 +130,35 @@
 .muted {
   margin: 0 0 12px;
   color: var(--muted);
+  font-size: 13px;
+}
+
+.liveHint {
+  margin: 0 0 12px;
+  font-size: 12px;
+  color: var(--accent);
+}
+
+.empty {
+  padding: 8px 0 16px;
+}
+
+.empty strong {
+  display: block;
+  font-size: 14px;
+  margin-bottom: 6px;
+}
+
+.empty p {
+  margin: 0 0 10px;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.empty a {
+  color: var(--accent);
+  font-weight: 600;
   font-size: 13px;
 }
 

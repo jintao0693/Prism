@@ -78,9 +78,43 @@
   margin-top: 4px;
 }
 
-.message {
+.messageOk,
+.messageErr {
   margin: 12px 0 0;
   font-size: 13px;
-  color: var(--accent);
   line-height: 1.5;
+  padding: 8px 10px;
+  border-radius: 10px;
+}
+
+.messageOk {
+  color: #0f6e4f;
+  background: #e7f6ef;
+}
+
+.messageErr {
+  color: #b42318;
+  background: #fef3f2;
+}
+
+.soonBlock p {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.soonBadge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--warn-soft);
+  color: var(--warn-text);
+}
+
+.loadFail {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
 }

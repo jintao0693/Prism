@@ -16,23 +16,33 @@ export default function HomeDashboard({
   conversations,
   assets,
 }: HomeDashboardProps) {
+  const latest = conversations[0];
+
   return (
     <div className={`page-enter ${styles.wrap}`}>
       <section className={styles.hero}>
         <h2>今天创作什么？</h2>
-        <p>
-          对话里直接说需求：自动走问答、生图、生视频；可附参考图改稿或做成预告。
-          知识库已支持图片入库、文本检索、以文搜图、以图搜图；资产中心可送回对话继续改。
-        </p>
+        <p>一句话出图、改稿或做成预告；需要品牌设定时勾选知识库即可。</p>
         <div className={styles.quickRow}>
-          <Link className={styles.quick} href={routes.chat(workspaceId)}>
-            去创作对话
+          {latest ? (
+            <Link
+              className={styles.quickPrimary}
+              href={routes.chatConversation(workspaceId, latest.id)}
+            >
+              继续上次对话
+            </Link>
+          ) : null}
+          <Link
+            className={latest ? styles.quick : styles.quickPrimary}
+            href={routes.chat(workspaceId)}
+          >
+            {latest ? "新开对话" : "去创作对话"}
           </Link>
           <Link className={styles.quick} href={routes.knowledge(workspaceId)}>
-            打开知识库
+            知识库
           </Link>
           <Link className={styles.quick} href={routes.assets(workspaceId)}>
-            查看资产中心
+            资产中心
           </Link>
         </div>
       </section>
@@ -54,13 +64,13 @@ export default function HomeDashboard({
                 className={styles.row}
               >
                 <span className={`thumb-${c.thumbTone} ${styles.thumb}`} />
-                <span>
+                <span className={styles.rowText}>
                   <strong>{c.title}</strong>
                   <span className={styles.meta}>
                     {c.kind === "video"
-                      ? "视频会话"
+                      ? "视频"
                       : c.kind === "image"
-                        ? "图片会话"
+                        ? "图片"
                         : "对话"}{" "}
                     · {c.updatedAtLabel}
                   </span>
@@ -82,7 +92,7 @@ export default function HomeDashboard({
             {assets.slice(0, 3).map((a) => (
               <Link
                 key={a.id}
-                href={routes.assets(workspaceId)}
+                href={`${routes.assets(workspaceId)}?highlight=${encodeURIComponent(a.id)}`}
                 className={styles.row}
               >
                 <span className={`${styles.thumbBox} thumb-${a.tone}`}>

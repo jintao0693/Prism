@@ -47,18 +47,33 @@
   gap: 10px;
 }
 
-.quick {
+.quick,
+.quickPrimary {
   padding: 10px 14px;
   border-radius: 999px;
+  font-size: 13px;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.quick {
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.12);
   color: #eef2f6;
-  font-size: 13px;
-  transition: background 0.15s;
 }
 
 .quick:hover {
   background: rgba(255, 255, 255, 0.14);
+}
+
+.quickPrimary {
+  background: #eef2f6;
+  border: 1px solid #eef2f6;
+  color: #161a21;
+  font-weight: 600;
+}
+
+.quickPrimary:hover {
+  background: #fff;
 }
 
 .grid {

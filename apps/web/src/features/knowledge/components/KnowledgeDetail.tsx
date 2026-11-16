@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import PageHeader from "@/components/ui/PageHeader";
 import Button from "@/components/ui/Button";
 import Panel from "@/components/ui/Panel";
@@ -39,6 +40,7 @@ export default function KnowledgeDetail({
   knowledgeBase: initialKb,
   initialHits,
 }: KnowledgeDetailProps) {
+  const router = useRouter();
   const [kb, setKb] = useState(initialKb);
   const [tab, setTab] = useState<SearchTab>("text");
   const [query, setQuery] = useState("");
@@ -279,15 +281,15 @@ export default function KnowledgeDetail({
 
             {tab === "img2img" ? (
               <div className={styles.notice}>
-                上传一张参考图，用多模态向量在库内做相似召回。图片边长需 ≥ 14px；可附带文字提示词辅助排序。
+                选一张参考图，在库里找视觉相近的素材；可顺手补一句描述帮排序。
               </div>
             ) : tab === "text2img" ? (
               <div className={styles.notice}>
-                用文字描述在已入库图片中检索（需 Embedding 模型）。
+                用一句话描述想找的画面，在已入库图片里召回。
               </div>
             ) : (
               <div className={styles.notice}>
-                在已入库文档中做语义/关键词检索。
+                按意思搜文档与设定，不必精确记关键词。
               </div>
             )}
 
@@ -364,7 +366,7 @@ export default function KnowledgeDetail({
           <Panel className={styles.ingest}>
             <h3>入库</h3>
             <p className={styles.ingestHint}>
-              图片落本地存储并写入多模态向量（边长 ≥ 14px）；文档走文本向量。入库后可在右侧查看是否已向量化。
+              上传图片或粘贴文档后会自动写入向量，便于对话引用与检索。右侧可查看每条是否已向量化。
             </p>
             <input
               ref={uploadRef}
@@ -434,7 +436,7 @@ export default function KnowledgeDetail({
             <h3 className={styles.sectionTitle}>检索结果</h3>
             {hits.length === 0 ? (
               <Panel className={styles.emptyHits}>
-                <p>暂无命中。先入库素材，再选对应检索方式。</p>
+                <p>还没有命中。先往库里放点素材，再选一种方式搜索。</p>
               </Panel>
             ) : null}
             {hits.map((hit) => (
@@ -443,6 +445,7 @@ export default function KnowledgeDetail({
                 hit={hit}
                 workspaceId={workspaceId}
                 kbName={kb.name}
+                routerPush={(href) => router.push(href)}
               />
             ))}
           </div>
@@ -509,16 +512,20 @@ function HitCard({
   hit,
   workspaceId,
   kbName,
+  routerPush,
 }: {
   hit: KnowledgeHit;
   workspaceId: string;
   kbName: string;
+  routerPush: (href: string) => void;
 }) {
   const [busy, setBusy] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
 
   async function sendToChat() {
     if (busy) return;
     setBusy(true);
+    setSendError(null);
     try {
       const { createConversation } = await import("@/features/chat");
       const { stashComposerDraft } = await import("@/lib/pending-draft");
@@ -534,8 +541,9 @@ function HitCard({
         workspaceId,
         hit.title.slice(0, 28) || "知识库创作",
       );
-      window.location.href = routes.chatConversation(workspaceId, created.id);
-    } catch {
+      routerPush(routes.chatConversation(workspaceId, created.id));
+    } catch (err: unknown) {
+      setSendError(err instanceof Error ? err.message : "带回对话失败，请重试");
       setBusy(false);
     }
   }
@@ -571,6 +579,11 @@ function HitCard({
         >
           {busy ? "跳转中…" : "带回对话"}
         </button>
+        {sendError ? (
+          <p className={styles.sendError} role="alert">
+            {sendError}
+          </p>
+        ) : null}
       </div>
     </div>
   );

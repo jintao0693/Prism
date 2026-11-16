@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import Panel from "@/components/ui/Panel";
 import Button from "@/components/ui/Button";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import PageHeader from "@/components/ui/PageHeader";
 import MessageBubble from "@/features/chat/components/MessageBubble";
 import ChatComposer from "@/features/chat/components/ChatComposer";
@@ -56,7 +57,9 @@ export default function ChatWorkspace({
   const router = useRouter();
   const searchParams = useSearchParams();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [loadingThread, setLoadingThread] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [statusText, setStatusText] = useState<string | null>(null);
   const [knowledgeBases, setKnowledgeBases] = useState<KnowledgeBase[]>([]);
@@ -72,9 +75,19 @@ export default function ChatWorkspace({
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
   const [draftText, setDraftText] = useState<string | null>(null);
   const [draftNonce, setDraftNonce] = useState(0);
+  const [stickToBottom, setStickToBottom] = useState(true);
+  const [renameTarget, setRenameTarget] = useState<ConversationSummary | null>(
+    null,
+  );
+  const [renameValue, setRenameValue] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<ConversationSummary | null>(
+    null,
+  );
+  const [summaryOpen, setSummaryOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const messagesRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const stickRef = useRef(true);
 
   const sessionList = useMemo(() => {
     const q = sessionQuery.trim().toLowerCase();
@@ -137,23 +150,44 @@ export default function ChatWorkspace({
   }, [workspaceId]);
 
   useEffect(() => {
+    stickRef.current = stickToBottom;
+  }, [stickToBottom]);
+
+  useEffect(() => {
+    if (!stickRef.current) return;
     const el = bottomRef.current;
     if (!el) return;
     el.scrollIntoView({ behavior: sending ? "smooth" : "auto", block: "end" });
   }, [messages, statusText, sending, pendingRefs, error]);
 
+  function onMessagesScroll() {
+    const box = messagesRef.current;
+    if (!box) return;
+    const dist = box.scrollHeight - box.scrollTop - box.clientHeight;
+    const near = dist < 96;
+    setStickToBottom(near);
+  }
+
   useEffect(() => {
     let cancelled = false;
     setError(null);
+    setLoadError(null);
     setActiveJobId(null);
+    setMessages([]);
+    setDetail(null);
+    setLoadingThread(true);
     startTransition(() => {
       void getConversationMessages(activeConversationId, workspaceId)
         .then((data) => {
-          if (!cancelled) setMessages(data);
+          if (!cancelled) {
+            setMessages(data);
+            setLoadingThread(false);
+          }
         })
         .catch((err: unknown) => {
           if (!cancelled) {
-            setError(err instanceof Error ? err.message : "加载对话失败");
+            setLoadError(err instanceof Error ? err.message : "加载对话失败");
+            setLoadingThread(false);
           }
         });
       void getConversationDetail(activeConversationId, workspaceId)
@@ -173,6 +207,26 @@ export default function ChatWorkspace({
       cancelled = true;
     };
   }, [activeConversationId, workspaceId]);
+
+  function reloadThread() {
+    setLoadError(null);
+    setLoadingThread(true);
+    setMessages([]);
+    startTransition(() => {
+      void getConversationMessages(activeConversationId, workspaceId)
+        .then((data) => {
+          setMessages(data);
+          setLoadingThread(false);
+        })
+        .catch((err: unknown) => {
+          setLoadError(err instanceof Error ? err.message : "加载对话失败");
+          setLoadingThread(false);
+        });
+      void getConversationDetail(activeConversationId, workspaceId)
+        .then(setDetail)
+        .catch(() => setDetail(null));
+    });
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -269,9 +323,30 @@ export default function ChatWorkspace({
     setDraftNonce((n) => n + 1);
   }
 
+  async function handleQuickPrompt(assetId: string, prompt: string) {
+    setPendingRefs((prev) => {
+      if (prev.some((p) => p.id === assetId)) return prev;
+      const fromMsg = messages
+        .flatMap((m) => m.results || [])
+        .find((r) => r.id === assetId);
+      return [
+        ...prev,
+        {
+          id: assetId,
+          name: fromMsg?.label || "参考图",
+          thumbUrl: fromMsg?.thumbUrl || fromMsg?.url,
+          url: fromMsg?.url,
+        },
+      ].slice(0, 4);
+    });
+    injectDraft(prompt);
+    setStickToBottom(true);
+  }
+
   async function handleSend(text: string, files: File[]) {
     setError(null);
     setSending(true);
+    setStickToBottom(true);
     setStatusText(files.length ? "正在上传参考图…" : "正在理解意图…");
 
     const galleryPreviews: GenerationResult[] = pendingRefs.map((ref) => ({
@@ -393,24 +468,39 @@ export default function ChatWorkspace({
     }
   }
 
-  async function handleRename(c: ConversationSummary) {
-    const next = window.prompt("重命名会话", c.title);
-    if (!next || !next.trim() || next.trim() === c.title) return;
+  function openRename(c: ConversationSummary) {
+    setRenameTarget(c);
+    setRenameValue(c.title);
+  }
+
+  async function confirmRename() {
+    if (!renameTarget) return;
+    const next = renameValue.trim();
+    if (!next || next === renameTarget.title) {
+      setRenameTarget(null);
+      return;
+    }
     try {
       const updated = await renameConversation(
-        c.id,
+        renameTarget.id,
         workspaceId,
-        next.trim(),
+        next,
       );
-      setTitleOverrides((prev) => ({ ...prev, [c.id]: updated.title }));
+      setTitleOverrides((prev) => ({
+        ...prev,
+        [renameTarget.id]: updated.title,
+      }));
+      setRenameTarget(null);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "重命名失败");
     }
   }
 
-  async function handleDelete(c: ConversationSummary) {
-    if (!window.confirm(`删除会话「${c.title}」？此操作不可恢复。`)) return;
+  async function confirmDelete() {
+    const c = deleteTarget;
+    if (!c) return;
+    setDeleteTarget(null);
     try {
       await deleteConversation(c.id, workspaceId);
       if (c.id === activeConversationId) {
@@ -455,7 +545,12 @@ export default function ChatWorkspace({
   }
 
   const showEmptyThread =
-    !pending && !sending && messages.length === 0 && !error;
+    !loadingThread &&
+    !pending &&
+    !sending &&
+    messages.length === 0 &&
+    !error &&
+    !loadError;
 
   return (
     <div className={`page-enter ${styles.wrap}`}>
@@ -496,7 +591,17 @@ export default function ChatWorkspace({
           {sessionList.length === 0 ? (
             <div className={styles.emptyBox}>
               <strong>没有匹配会话</strong>
-              <p>换个关键词，或点右上角新建对话。</p>
+              <p>
+                换个关键词，或{" "}
+                <button
+                  type="button"
+                  className={styles.linkish}
+                  onClick={() => void handleNewChat()}
+                >
+                  新建对话
+                </button>
+                。
+              </p>
             </div>
           ) : null}
           {sessionList.map((c) => (
@@ -528,17 +633,19 @@ export default function ChatWorkspace({
               <div className={styles.sessionActions}>
                 <button
                   type="button"
+                  aria-label="重命名"
                   title="重命名"
-                  onClick={() => void handleRename(c)}
+                  onClick={() => openRename(c)}
                 >
-                  改
+                  重命名
                 </button>
                 <button
                   type="button"
+                  aria-label="删除"
                   title="删除"
-                  onClick={() => void handleDelete(c)}
+                  onClick={() => setDeleteTarget(c)}
                 >
-                  删
+                  删除
                 </button>
               </div>
             </div>
@@ -549,49 +656,101 @@ export default function ChatWorkspace({
           {detail?.summaryText ? (
             <div className={styles.compactBanner}>
               <strong>已整理摘要 · 第 {detail.compactGeneration || 1} 次</strong>
-              <p>{detail.summaryText.slice(0, 180)}{detail.summaryText.length > 180 ? "…" : ""}</p>
+              <p>
+                {summaryOpen
+                  ? detail.summaryText
+                  : `${detail.summaryText.slice(0, 160)}${
+                      detail.summaryText.length > 160 ? "…" : ""
+                    }`}
+              </p>
+              {detail.summaryText.length > 160 ? (
+                <button
+                  type="button"
+                  className={styles.linkish}
+                  onClick={() => setSummaryOpen((v) => !v)}
+                >
+                  {summaryOpen ? "收起" : "展开全文"}
+                </button>
+              ) : null}
             </div>
           ) : null}
           {activeJobId ? (
             <div className={styles.jobBanner}>
               视频任务进行中，关闭页面也可稍后在{" "}
-              <Link href={routes.jobs(workspaceId)}>任务中心</Link> 查看进度（
-              {activeJobId.slice(0, 10)}…）
+              <Link href={routes.jobs(workspaceId)}>任务中心</Link>{" "}
+              查看进度与成片。
             </div>
           ) : null}
-          <div className={styles.messages} ref={messagesRef}>
-            {pending && messages.length === 0 ? (
-              <p className={styles.hint}>加载对话…</p>
+          <div className={styles.messagesPane}>
+            <div
+              className={styles.messages}
+              ref={messagesRef}
+              onScroll={onMessagesScroll}
+            >
+              {loadingThread ? (
+                <p className={styles.hint}>加载对话…</p>
+              ) : null}
+              {loadError ? (
+                <div className={styles.error} role="alert">
+                  <strong>对话加载失败</strong>
+                  <p>{loadError}</p>
+                  <button
+                    type="button"
+                    className={styles.errorDismiss}
+                    onClick={reloadThread}
+                  >
+                    重试
+                  </button>
+                </div>
+              ) : null}
+              {showEmptyThread ? (
+                <div className={styles.emptyBox}>
+                  <strong>从一句需求开始</strong>
+                  <p>
+                    例如：「按参考图做商店页头图，再偏暖一点」。也可从资产中心点「送回对话」；需要设定问答时在下方勾选知识库。
+                  </p>
+                </div>
+              ) : null}
+              {messages.map((m) => (
+                <MessageBubble
+                  key={m.id}
+                  message={m}
+                  onRetry={m.failed ? handleRetryFailed : undefined}
+                  onQuickPrompt={
+                    sending ? undefined : (id, prompt) => void handleQuickPrompt(id, prompt)
+                  }
+                />
+              ))}
+              {error ? (
+                <div className={styles.error} role="alert">
+                  <strong>出错了</strong>
+                  <p>{error}</p>
+                  <button
+                    type="button"
+                    className={styles.errorDismiss}
+                    onClick={() => setError(null)}
+                  >
+                    知道了
+                  </button>
+                </div>
+              ) : null}
+              <div ref={bottomRef} className={styles.scrollAnchor} aria-hidden />
+            </div>
+            {!stickToBottom ? (
+              <button
+                type="button"
+                className={styles.jumpBottom}
+                onClick={() => {
+                  setStickToBottom(true);
+                  bottomRef.current?.scrollIntoView({
+                    behavior: "smooth",
+                    block: "end",
+                  });
+                }}
+              >
+                回到底部
+              </button>
             ) : null}
-            {showEmptyThread ? (
-              <div className={styles.emptyBox}>
-                <strong>从一句需求开始</strong>
-                <p>
-                  例如：「按参考图做商店页头图，再偏暖一点」。也可从资产中心点「送回对话」；需要设定问答时在下方勾选知识库。
-                </p>
-              </div>
-            ) : null}
-            {messages.map((m) => (
-              <MessageBubble
-                key={m.id}
-                message={m}
-                onRetry={m.failed ? handleRetryFailed : undefined}
-              />
-            ))}
-            {error ? (
-              <div className={styles.error} role="alert">
-                <strong>出错了</strong>
-                <p>{error}</p>
-                <button
-                  type="button"
-                  className={styles.errorDismiss}
-                  onClick={() => setError(null)}
-                >
-                  知道了
-                </button>
-              </div>
-            ) : null}
-            <div ref={bottomRef} className={styles.scrollAnchor} aria-hidden />
           </div>
           <div className={styles.composerDock}>
             <ChatComposer
@@ -618,6 +777,31 @@ export default function ChatWorkspace({
           </div>
         </Panel>
       </div>
+
+      <ConfirmDialog
+        open={Boolean(renameTarget)}
+        title="重命名会话"
+        description="给会话起一个更好认的名字。"
+        confirmLabel="保存"
+        inputValue={renameValue}
+        inputPlaceholder="会话标题"
+        onInputChange={setRenameValue}
+        onCancel={() => setRenameTarget(null)}
+        onConfirm={() => void confirmRename()}
+      />
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        title="删除会话"
+        description={
+          <>
+            将删除「{deleteTarget?.title}」及其消息，此操作不可恢复。
+          </>
+        }
+        confirmLabel="删除"
+        danger
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={() => void confirmDelete()}
+      />
     </div>
   );
 }

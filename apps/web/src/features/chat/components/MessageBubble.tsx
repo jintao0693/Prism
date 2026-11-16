@@ -2,17 +2,24 @@
 
 import { useMemo, useState } from "react";
 import { cn } from "@/lib/cn";
+import { formatClock } from "@/lib/format-time";
 import MediaPreview from "@/components/media/MediaPreview";
 import MediaLightbox from "@/components/media/MediaLightbox";
+import SimpleMarkdown from "@/components/ui/SimpleMarkdown";
 import type { ChatMessage, GenerationResult } from "@/types/domain";
 import styles from "./MessageBubble.module.css";
 
 export interface MessageBubbleProps {
   message: ChatMessage;
   onRetry?: () => void;
+  onQuickPrompt?: (assetId: string, prompt: string) => void;
 }
 
-export default function MessageBubble({ message, onRetry }: MessageBubbleProps) {
+export default function MessageBubble({
+  message,
+  onRetry,
+  onQuickPrompt,
+}: MessageBubbleProps) {
   const isUser = message.role === "user";
   const hasText = Boolean(message.content?.trim());
   const hasResults = Boolean(message.results?.length);
@@ -28,8 +35,10 @@ export default function MessageBubble({ message, onRetry }: MessageBubbleProps) 
     if (!r.parentAssetId) return null;
     const parent = byId.get(r.parentAssetId);
     if (parent) return `基于「${parent.label}」改稿`;
-    return `基于资产 ${r.parentAssetId.slice(0, 10)}… 改稿`;
+    return `基于上一版改稿`;
   }
+
+  const timeLabel = !message.streaming ? formatClock(message.createdAt) : "";
 
   return (
     <div
@@ -41,12 +50,16 @@ export default function MessageBubble({ message, onRetry }: MessageBubbleProps) 
       )}
     >
       {hasText ? (
-        <p>
-          {message.content}
-          {message.streaming ? (
-            <span className={styles.caret} aria-hidden />
-          ) : null}
-        </p>
+        isUser || message.streaming ? (
+          <p>
+            {message.content}
+            {message.streaming ? (
+              <span className={styles.caret} aria-hidden />
+            ) : null}
+          </p>
+        ) : (
+          <SimpleMarkdown text={message.content} />
+        )
       ) : message.streaming ? (
         <p className={styles.pending}>
           正在生成…
@@ -70,40 +83,73 @@ export default function MessageBubble({ message, onRetry }: MessageBubbleProps) 
         <div className={styles.results}>
           {message.results!.map((r) => {
             const lineage = lineageOf(r);
+            const canQuick =
+              Boolean(onQuickPrompt) &&
+              (r.kind === "image" || r.previewKind === "poster") &&
+              r.id &&
+              !r.id.startsWith("local_");
             return (
-              <button
-                key={r.id}
-                type="button"
-                className={cn(
-                  styles.result,
-                  !r.url && !r.thumbUrl && `thumb-${r.tone}`,
-                )}
-                onClick={() => {
-                  if (r.url || r.thumbUrl) setPreview(r);
-                }}
-              >
-                {r.url || r.thumbUrl ? (
-                  <MediaPreview
-                    url={r.url}
-                    thumbUrl={r.thumbUrl}
-                    kind={r.kind}
-                    previewKind={r.previewKind}
-                    mimeType={r.mimeType}
-                    alt={r.label}
-                    className={styles.resultImg}
-                    preferThumb={r.kind !== "video"}
-                    controls={false}
-                  />
+              <div key={r.id} className={styles.resultCard}>
+                <button
+                  type="button"
+                  className={cn(
+                    styles.result,
+                    !r.url && !r.thumbUrl && `thumb-${r.tone}`,
+                  )}
+                  onClick={() => {
+                    if (r.url || r.thumbUrl) setPreview(r);
+                  }}
+                >
+                  {r.url || r.thumbUrl ? (
+                    <MediaPreview
+                      url={r.url}
+                      thumbUrl={r.thumbUrl}
+                      kind={r.kind}
+                      previewKind={r.previewKind}
+                      mimeType={r.mimeType}
+                      alt={r.label}
+                      className={styles.resultImg}
+                      preferThumb={r.kind !== "video"}
+                      controls={false}
+                    />
+                  ) : null}
+                  <span>{r.label}</span>
+                  {lineage ? (
+                    <em className={styles.lineageBadge}>{lineage}</em>
+                  ) : null}
+                </button>
+                {canQuick ? (
+                  <div className={styles.quickActs}>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onQuickPrompt?.(
+                          r.id,
+                          "按参考图再偏暖一点，保留构图与人物位置",
+                        )
+                      }
+                    >
+                      再改一版
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onQuickPrompt?.(
+                          r.id,
+                          "把这张做成 5 秒氛围预告：镜头缓慢推进",
+                        )
+                      }
+                    >
+                      做成预告
+                    </button>
+                  </div>
                 ) : null}
-                <span>{r.label}</span>
-                {lineage ? (
-                  <em className={styles.lineageBadge}>{lineage}</em>
-                ) : null}
-              </button>
+              </div>
             );
           })}
         </div>
       ) : null}
+      {timeLabel ? <time className={styles.time}>{timeLabel}</time> : null}
 
       <MediaLightbox
         open={Boolean(preview)}

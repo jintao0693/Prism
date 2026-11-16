@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import AssetGallery from "@/features/assets/components/AssetGallery";
 import { listAssets } from "@/features/assets";
 
@@ -10,6 +11,8 @@ export default async function AssetsPage({
   const assets = await listAssets(workspaceId);
 
   return (
-    <AssetGallery workspaceId={workspaceId} initialAssets={assets} />
+    <Suspense fallback={<p style={{ padding: 24 }}>加载资产…</p>}>
+      <AssetGallery workspaceId={workspaceId} initialAssets={assets} />
+    </Suspense>
   );
 }

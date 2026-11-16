@@ -67,6 +67,7 @@ export default function ChatComposer({
   const [value, setValue] = useState("");
   const [sending, setSending] = useState(false);
   const [attachments, setAttachments] = useState<ComposerAttachment[]>([]);
+  const [attachHint, setAttachHint] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -89,7 +90,11 @@ export default function ChatComposer({
       if (!file.type.startsWith("image/")) continue;
       next.push({ file, previewUrl: URL.createObjectURL(file) });
     }
-    if (!next.length) return;
+    if (!next.length) {
+      setAttachHint("请选择 PNG / JPG / WebP / GIF 图片");
+      return;
+    }
+    setAttachHint(null);
     setAttachments((prev) => {
       for (const item of prev) URL.revokeObjectURL(item.previewUrl);
       return next;
@@ -178,6 +183,14 @@ export default function ChatComposer({
           placeholder="直接提问，或附参考图后说「再偏暖 / 做成预告」…"
           rows={3}
           disabled={busy}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+              e.preventDefault();
+              if (!busy && (value.trim() || attachments.length > 0)) {
+                e.currentTarget.form?.requestSubmit();
+              }
+            }
+          }}
         />
         <div className={styles.bar}>
           <div className={styles.chips}>
@@ -195,7 +208,10 @@ export default function ChatComposer({
               type="button"
               className={styles.chip}
               disabled={busy}
-              onClick={() => fileRef.current?.click()}
+              onClick={() => {
+                setAttachHint(null);
+                fileRef.current?.click();
+              }}
             >
               附参考图
             </button>
@@ -218,6 +234,11 @@ export default function ChatComposer({
             {sending ? "发送中…" : "发送"}
           </Button>
         </div>
+        {attachHint ? (
+          <p className={styles.attachHint} role="alert">
+            {attachHint}
+          </p>
+        ) : null}
         {statusText ? <p className={styles.status}>{statusText}</p> : null}
         {quotaHint ? <p className={styles.quotaHint}>{quotaHint}</p> : null}
       </div>
@@ -253,7 +274,8 @@ export default function ChatComposer({
         )}
       </div>
       <p className={styles.hint}>
-        勾选知识库后可走资料问答；生图约数十秒，视频约 1–3 分钟。
+        Enter 发送 · Shift+Enter 换行。勾选知识库可走资料问答；生图约数十秒，视频约
+        1–3 分钟。
       </p>
     </form>
   );

@@ -143,6 +143,46 @@
   white-space: nowrap;
 }
 
+.resultCard {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.quickActs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.quickActs button {
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink-soft);
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.quickActs button:hover {
+  border-color: #9bb8b5;
+  color: var(--accent);
+}
+
+.time {
+  display: block;
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--muted);
+  opacity: 0.85;
+}
+
+.user .time {
+  color: rgba(244, 246, 248, 0.65);
+}
+
 @media (max-width: 720px) {
   .results {
     grid-template-columns: 1fr;

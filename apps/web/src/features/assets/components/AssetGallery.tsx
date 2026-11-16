@@ -1,13 +1,14 @@
 "use client";
 
-import { useMemo, useRef, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import PageHeader from "@/components/ui/PageHeader";
 import Button from "@/components/ui/Button";
 import MediaPreview from "@/components/media/MediaPreview";
 import MediaLightbox from "@/components/media/MediaLightbox";
 import { listAssets, uploadAsset } from "@/features/assets";
-import { createConversation } from "@/features/chat";
+import { createConversation, listConversations } from "@/features/chat";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { stashPendingReferences } from "@/lib/pending-refs";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
@@ -26,10 +27,19 @@ export default function AssetGallery({
   initialAssets,
 }: AssetGalleryProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [filter, setFilter] = useState<Filter>("all");
   const [assets, setAssets] = useState(initialAssets);
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<AssetItem | null>(null);
+  const [sendTarget, setSendTarget] = useState<AssetItem | null>(null);
+  const highlightId = searchParams.get("highlight");
+
+  useEffect(() => {
+    if (!highlightId) return;
+    const el = document.getElementById(`asset-${highlightId}`);
+    el?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [highlightId, assets]);
   const [status, setStatus] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [sendingId, setSendingId] = useState<string | null>(null);
@@ -81,16 +91,21 @@ export default function AssetGallery({
     }
   }
 
-  async function sendToChat(asset: AssetItem) {
+  function requestSendToChat(asset: AssetItem) {
     const ok =
       asset.kind === "image" || asset.previewKind === "poster";
     if (!ok || asset.previewKind === "video") {
       setError("仅图片可送回对话作参考（视频请先导出静帧或用海报图）");
       return;
     }
+    setSendTarget(asset);
+  }
+
+  async function sendToChat(asset: AssetItem, mode: "recent" | "new") {
     setError(null);
     setStatus(null);
     setSendingId(asset.id);
+    setSendTarget(null);
     try {
       stashPendingReferences(workspaceId, [
         {
@@ -100,12 +115,27 @@ export default function AssetGallery({
           url: asset.url,
         },
       ]);
-      const created = await createConversation(
-        workspaceId,
-        `参考 · ${asset.name.slice(0, 24)}`,
-      );
+      let conversationId: string;
+      if (mode === "recent") {
+        const list = await listConversations(workspaceId);
+        if (list[0]) {
+          conversationId = list[0].id;
+        } else {
+          const created = await createConversation(
+            workspaceId,
+            `参考 · ${asset.name.slice(0, 24)}`,
+          );
+          conversationId = created.id;
+        }
+      } else {
+        const created = await createConversation(
+          workspaceId,
+          `参考 · ${asset.name.slice(0, 24)}`,
+        );
+        conversationId = created.id;
+      }
       router.push(
-        routes.chatConversation(workspaceId, created.id, {
+        routes.chatConversation(workspaceId, conversationId, {
           referenceAssetIds: [asset.id],
         }),
       );
@@ -187,7 +217,14 @@ export default function AssetGallery({
               : `基于 ${asset.parentAssetId.slice(0, 10)}… 改稿`
             : null;
           return (
-            <article key={asset.id} className={styles.asset}>
+            <article
+              key={asset.id}
+              className={cn(
+                styles.asset,
+                highlightId === asset.id && styles.highlight,
+              )}
+              id={`asset-${asset.id}`}
+            >
               <button
                 type="button"
                 className={styles.mediaWrap}
@@ -225,7 +262,7 @@ export default function AssetGallery({
                     type="button"
                     className={styles.sendBtn}
                     disabled={sendingId === asset.id}
-                    onClick={() => void sendToChat(asset)}
+                    onClick={() => requestSendToChat(asset)}
                   >
                     {sendingId === asset.id ? "跳转中…" : "送回对话"}
                   </button>
@@ -252,6 +289,26 @@ export default function AssetGallery({
             ? `基于 ${preview.parentAssetId.slice(0, 10)}… 改稿`
             : null
         }
+      />
+
+      <ConfirmDialog
+        open={Boolean(sendTarget)}
+        title="送回对话"
+        description={
+          <>
+            将「{sendTarget?.name}」作为参考图。可加入最近会话，或新开一轮改稿。
+          </>
+        }
+        confirmLabel="加入最近会话"
+        secondaryLabel="新开对话"
+        cancelLabel="取消"
+        onConfirm={() => {
+          if (sendTarget) void sendToChat(sendTarget, "recent");
+        }}
+        onSecondary={() => {
+          if (sendTarget) void sendToChat(sendTarget, "new");
+        }}
+        onCancel={() => setSendTarget(null)}
       />
     </div>
   );

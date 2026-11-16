@@ -294,6 +294,13 @@
   cursor: not-allowed;
 }
 
+.sendError {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: #b42318;
+  line-height: 1.4;
+}
+
 .itemGrid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));

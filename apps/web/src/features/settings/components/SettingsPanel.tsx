@@ -21,18 +21,34 @@ export default function SettingsPanel() {
   const [usage, setUsage] = useState<UsageSummary | null>(null);
   const [apiKey, setApiKey] = useState("");
   const [message, setMessage] = useState<string | null>(null);
+  const [messageTone, setMessageTone] = useState<"ok" | "err">("ok");
+  const [configFailed, setConfigFailed] = useState(false);
   const [pending, startTransition] = useTransition();
 
-  useEffect(() => {
-    loadStoredAuth();
+  function loadConfig() {
+    setConfigFailed(false);
+    setMessage(null);
     startTransition(() => {
       void getVolcengineConfig()
-        .then(setConfig)
-        .catch((err: Error) => setMessage(err.message));
+        .then((next) => {
+          setConfig(next);
+          setConfigFailed(false);
+        })
+        .catch((err: Error) => {
+          setConfigFailed(true);
+          setMessageTone("err");
+          setMessage(err.message);
+        });
       void getUsageSummary()
         .then(setUsage)
         .catch(() => setUsage(null));
     });
+  }
+
+  useEffect(() => {
+    loadStoredAuth();
+    loadConfig();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function save() {
@@ -52,9 +68,13 @@ export default function SettingsPanel() {
         .then((next) => {
           setConfig(next);
           setApiKey("");
+          setMessageTone("ok");
           setMessage("已保存火山方舟配置");
         })
-        .catch((err: Error) => setMessage(err.message));
+        .catch((err: Error) => {
+          setMessageTone("err");
+          setMessage(err.message);
+        });
     });
   }
 
@@ -63,11 +83,15 @@ export default function SettingsPanel() {
     startTransition(() => {
       void testVolcengineConnection()
         .then((res) => {
+          setMessageTone(res.ok ? "ok" : "err");
           setMessage(
-            `${res.ok ? "✓" : "✗"} ${res.message}${res.detail ? ` — ${res.detail}` : ""}`,
+            `${res.message}${res.detail ? ` — ${res.detail}` : ""}`,
           );
         })
-        .catch((err: Error) => setMessage(err.message));
+        .catch((err: Error) => {
+          setMessageTone("err");
+          setMessage(err.message);
+        });
     });
   }
 
@@ -79,9 +103,12 @@ export default function SettingsPanel() {
       />
 
       <Panel className={styles.panel}>
-        <section>
+        <section className={styles.soonBlock}>
           <h3>工作空间</h3>
-          <p>重命名、归档空间；管理空间成员（后续完善）。</p>
+          <p>
+            重命名、归档与成员管理即将推出。
+            <span className={styles.soonBadge}>即将推出</span>
+          </p>
         </section>
 
         <section className={styles.provider}>
@@ -175,10 +202,28 @@ export default function SettingsPanel() {
                 </Button>
               </div>
             </div>
+          ) : configFailed ? (
+            <div className={styles.loadFail}>
+              <p className={styles.messageErr} role="alert">
+                {message || "配置加载失败"}
+              </p>
+              <Button variant="ghost" onClick={loadConfig} disabled={pending}>
+                重试
+              </Button>
+            </div>
           ) : (
             <p className={styles.hint}>加载配置中…</p>
           )}
-          {message ? <p className={styles.message}>{message}</p> : null}
+          {message && config ? (
+            <p
+              className={
+                messageTone === "err" ? styles.messageErr : styles.messageOk
+              }
+              role={messageTone === "err" ? "alert" : "status"}
+            >
+              {message}
+            </p>
+          ) : null}
         </section>
 
         <section>

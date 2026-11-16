@@ -16,7 +16,7 @@
 | 前后端联调 | ✅ 已接通 | 登录→工作空间→对话 SSE→知识库/资产/设置 |
 | 意图识别 | ✅ 已上线 | 对话模型分类 chat/image/video/knowledge，失败回退正则 |
 | 多轮上下文 | ✅ 已上线 | 滑动窗 + 摘要检查点；usage 触发自动压缩；压缩后重注工作区/KB；手动 `POST .../compact` |
-| 多模态 Agent | ✅ 工具编排 | 统一 `tool_runner`：文/图生图、文/图生视频、KB；资产记忆；SSE 真流式 + `media.progress`；游戏向 3 案例已过 |
+| 多模态 Agent | ✅ 工具编排 | 统一 `tool_runner`：文/图生图、文/图生视频、KB；资产记忆；SSE 真流式 + `media.progress`；游戏向 5 案例（含三端投放 / 以图搜库洗稿） |
 | 多模态知识库 | ✅ 图片链路已通 | 入库/检索/以图搜图/补齐向量/批量上传；Postgres 走 pgvector，SQLite JSON 回退；视频片段仍未做 |
 | 页面表达 | ✅ 已纠偏 | 首页/对话文案对齐真能力；KB 在输入区下；lightbox / 血缘 / 会话治理 |
 | 任务中心 | ✅ 已上线 | 视频 GenerationJob + 侧栏入口；进程内 asyncio（Worker 仍待） |
@@ -85,7 +85,8 @@
 3. Alembic 初始迁移（替代纯 `create_all`）  
 4. ~~联调体验：任务进度、错误文案、空状态~~ → 对话/任务中心已加强；生产部署仍待  
 5. ~~README 案例配图 / 预告成片~~ → `docs/media/cases/`  
-6. **下一刀优先三件**（详见 [OPTIMIZATION.md](OPTIMIZATION.md)）：生产部署、真 Worker 队列、结果快捷再创作  
+6. ~~体验打磨：会话切换闪烁、失败可重试、KB 命名创建、设置/资产 Suspense、软文案~~ → 本轮已合入前端  
+7. **下一刀优先三件**（详见 [OPTIMIZATION.md](OPTIMIZATION.md)）：生产部署、真 Worker 队列、结果快捷再创作（对话内已部分落地）  
 
 ### 多模态 Agent 下一步优化
 

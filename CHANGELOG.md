@@ -6,6 +6,9 @@
 
 ### Added
 
+- README / GAME_CASES 增补两个高级案例：三端投放齐出（16:9 / 1:1 / 9:16）、以图搜库洗品牌活动版（`docs/media/cases/case4-*` / `case5-*`）
+- 前端体验打磨：会话切换防闪烁与加载重试、Enter 发送、结果快捷再创作、KB 命名创建、设置/资产失败可恢复、ConfirmDialog / Markdown 气泡
+
 - 多模态 Agent 统一 `tool_runner`：文/图生图、文/图生视频、KB 检索；资产记忆与 `parentAssetId` 血缘
 - 对话多轮上下文：滑动窗 + 摘要检查点；usage 触发自动压缩；手动 `POST .../compact`
 - 多模态知识库：图片入库/检索/以图搜图、补齐向量、批量上传；Postgres pgvector / SQLite JSON 双路径
