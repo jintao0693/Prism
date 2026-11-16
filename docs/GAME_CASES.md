@@ -4,7 +4,16 @@
 > 复现：`python scripts/run_game_cases.py`  
 > 产品叙事摘要已写入根 [README.md](../README.md)
 
-三个案例不是孤立的接口冒烟，而是同一发行周里的连续作业：**对齐规范 → 商店页 KV 改稿 → 静帧拉预告**。
+三个案例不是孤立的接口冒烟，而是同一发行周里的连续作业：**对齐规范 → 商店页 KV 改稿 → 静帧拉预告**。  
+演示素材已放进 [`docs/media/cases/`](media/cases/)，并嵌入根 [README.md](../README.md)。
+
+| 文件 | 说明 |
+|------|------|
+| `case1-brand-brief.jpg` | 知识库 brief / 主色示意 |
+| `case2-kv-v1.jpg` | 商店页 KV 文生图初稿 |
+| `case2-kv-warm.jpg` | 「再偏暖」图生图改稿 |
+| `case3-teaser-poster.jpg` | 预告关键静帧 |
+| `case3-teaser.mp4` | 5 秒图生视频成片 |
 
 ---
 
@@ -29,6 +38,8 @@
 | 回答命中主色与立绘禁忌 | ✅ |
 
 联调样例：知识库 `kb_f5fe90b977` · 会话 `c_1af86d1c0c`
+
+![知识库 brief 示意](media/cases/case1-brand-brief.jpg)
 
 ---
 
@@ -57,6 +68,10 @@
 - A：`.../6b76939ec10c4640b645e9d484f55eaa_volc_image.png`  
 - B：`.../bf1d62dd0e5a40c2bf6f1b8da8fca57b_volc_image_edit.png`（parent `asset_648d30c3b0f4`）
 
+| 初稿 | 偏暖改稿 |
+|------|----------|
+| ![KV 初稿](media/cases/case2-kv-v1.jpg) | ![KV 偏暖](media/cases/case2-kv-warm.jpg) |
+
 ---
 
 ## 案例 3 · 预告氛围片：定稿静帧拉成 5 秒片
@@ -81,6 +96,10 @@ KV 已定。还要 5 秒氛围预告给商店详情与社媒首发：缓慢推�
 
 联调样例：`.../6c1e44df14e64983a94c0284b047f41e_volc_i2v.mp4`（parent `asset_63acd73d2aea`）  
 说明：方舟首帧图生视频不传 `ratio`（比例跟随首帧图）。
+
+![预告关键静帧](media/cases/case3-teaser-poster.jpg)
+
+[下载 / 播放成片 MP4](media/cases/case3-teaser.mp4)
 
 ---
 

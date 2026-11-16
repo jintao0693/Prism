@@ -17,6 +17,7 @@
 - 素材预览修复：入库旁路 JPEG 缩略图、`thumbUrl` / `previewKind`；视频海报不再误用 `<video>`；媒体 URL 始终用浏览器可达 origin
 - 本月用量按生成资产实算（侧栏 / 设置同步）；生图生视频后即时记账
 - 资产中心「送回对话」：新建会话并挂上参考图，可直接图生图 / 图生视频
+- README / GAME_CASES 嵌入发行周真实出图与预告成片（`docs/media/cases/`）
 - `docs/PROGRESS.md` 开发进度单一事实来源
 - 开源协作文档：CONTRIBUTING、CODE_OF_CONDUCT、SECURITY、ROADMAP
 - GitHub Actions CI（API ruff/pytest、Web lint/build）

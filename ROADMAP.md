@@ -16,7 +16,7 @@
 - [ ] 端到端联调体验（错误提示、任务进度、空状态）
 - [ ] Docker 全栈实机验收
 - [ ] Alembic 正式迁移流（替代仅 create_all）
-- [ ] README 截图 / 演示 GIF
+- [x] README 案例配图 / 预告成片（`docs/media/cases/`）
 
 ## Next（Phase 2）
 

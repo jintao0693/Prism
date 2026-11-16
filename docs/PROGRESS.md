@@ -82,7 +82,7 @@
 2. ~~多模态 P0 + 游戏向 3 案例联调~~ → [GAME_CASES.md](GAME_CASES.md)  
 3. Alembic 初始迁移（替代纯 `create_all`）  
 4. 联调体验：任务进度、错误文案、空状态  
-5. README 加截图 / 演示 GIF（**需要你**：本地跑通后截几张，或授权我用浏览器截）
+5. ~~README 案例配图 / 预告成片~~ → `docs/media/cases/`
 
 ### 多模态 Agent 下一步优化
 
