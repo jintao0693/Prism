@@ -15,7 +15,7 @@
 | 产品 MVP 骨架 | ✅ 基本完成 | 登录、工作空间、对话、知识库、资产、设置页 |
 | 火山方舟接入 | ✅ 代码完成 | Chat / Seedream / Seedance / Embedding；需自备 Key 验收 |
 | 开源基建 | ✅ 完成 | MIT、AUTHORS、CI、Issue/PR 模板、CONTRIBUTING 等 |
-| 首跑可用性 | 🔄 进行中 | CORS、密码盐、SSR URL、mock 默认值已修；待合入验证 |
+| 首跑可用性 | ✅ 已合入 | CORS、密码盐、SSR URL、mock 默认值已推 main |
 | 测试 | 🔄 加厚中 | health/login/security/settings 共 6 测通过；media 待补 |
 | Docker 全栈 | 🔄 半完成 | `--profile full` + SSR `API_BASE_URL` 已配；待实机验收 |
 | Alembic | ❌ 未做 | 仍用 `create_all` |
