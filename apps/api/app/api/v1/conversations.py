@@ -1,4 +1,4 @@
-"""对话接口（含 SSE）。"""
+"""对话接口（含 SSE、上下文压缩）。"""
 
 from __future__ import annotations
 
@@ -17,14 +17,22 @@ from app.core.db import get_db
 from app.models.conversation import Conversation, Message
 from app.schemas.conversation import (
     ChatMessageOut,
+    CompactOut,
     ConversationCreate,
     ConversationSummaryOut,
     GenerationResultOut,
     SendMessageRequest,
 )
+from app.services.agent.compact import (
+    apply_usage_to_conversation,
+    compact_conversation,
+    maybe_auto_compact,
+)
+from app.services.agent.context import load_prior_messages
 from app.services.agent.deps import PrismDeps
 from app.services.agent.streaming import encode_sse, iter_agent_events
 from app.services.media.gateway import MediaGateway
+from app.services.providers.registry import build_volcengine_client
 
 router = APIRouter(prefix="/conversations", tags=["对话"])
 
@@ -121,6 +129,30 @@ async def get_messages(
     return [_msg_out(m) for m in conv.messages]
 
 
+@router.post("/{conversation_id}/compact", response_model=CompactOut)
+async def compact_messages(
+    conversation_id: str,
+    ctx: RequestContext = Depends(require_workspace),
+    db: AsyncSession = Depends(get_db),
+) -> CompactOut:
+    """手动压缩会话上下文（摘要检查点，不删消息）。"""
+    conv = await db.get(Conversation, conversation_id)
+    if not conv or conv.tenant_id != ctx.tenant_id or conv.workspace_id != ctx.workspace_id:
+        raise HTTPException(status_code=404, detail="会话不存在")
+    ark = await build_volcengine_client(db, ctx.tenant_id)
+    if not ark or not ark.chat_model:
+        raise HTTPException(status_code=400, detail="未配置对话模型，无法压缩")
+    result = await compact_conversation(db, conv, ark)
+    await db.commit()
+    return CompactOut(
+        didCompact=result.did_compact,
+        generation=result.generation,
+        summaryChars=result.summary_chars,
+        reason=result.reason,
+        contextTokensEstimate=int(conv.context_tokens_estimate or 0),
+    )
+
+
 @router.post("/{conversation_id}/messages")
 async def send_message(
     conversation_id: str,
@@ -143,7 +175,24 @@ async def send_message(
     db.add(user_msg)
     await db.flush()
 
-    # 按租户配置选择火山或演示媒体网关
+    ark = await build_volcengine_client(db, ctx.tenant_id)
+    # 发消息前：usage / 窗口过大则自动压缩（不含本轮）
+    compact_result = await maybe_auto_compact(
+        db,
+        conv,
+        ark,
+        exclude_message_id=user_msg.id,
+    )
+
+    history = await load_prior_messages(
+        db,
+        conversation_id,
+        exclude_message_id=user_msg.id,
+        summary_text=conv.summary_text,
+        compacted_at=conv.compacted_at,
+        include_summary_bridge=bool(conv.summary_text),
+    )
+
     media = await MediaGateway.for_tenant(db, ctx.tenant_id)
     deps = PrismDeps(
         tenant_id=ctx.tenant_id,
@@ -152,9 +201,23 @@ async def send_message(
         db=db,
         media=media,
         knowledge_base_ids=body.knowledge_base_ids,
+        history_messages=history,
+        compact_generation=int(conv.compact_generation or 0),
     )
 
     async def event_stream():
+        if compact_result.did_compact:
+            yield encode_sse(
+                {
+                    "type": "context.compacted",
+                    "data": {
+                        "generation": compact_result.generation,
+                        "summaryChars": compact_result.summary_chars,
+                        "reason": compact_result.reason,
+                    },
+                },
+            )
+
         final_content = ""
         tool_label = None
         results = []
@@ -175,6 +238,12 @@ async def send_message(
             results_json=json.dumps(results, ensure_ascii=False) if results else None,
         )
         db.add(assistant)
+        apply_usage_to_conversation(
+            conv,
+            prompt_tokens=deps.last_prompt_tokens,
+            completion_tokens=deps.last_completion_tokens,
+            total_tokens=deps.last_total_tokens,
+        )
         conv.updated_at = datetime.now(UTC)
         await db.commit()
 

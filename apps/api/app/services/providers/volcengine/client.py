@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from dataclasses import dataclass
 from typing import Any
 
 import httpx
@@ -13,8 +14,30 @@ logger = logging.getLogger(__name__)
 DEFAULT_BASE = "https://ark.cn-beijing.volces.com/api/v3"
 
 
+def _as_int(value: Any) -> int | None:
+    try:
+        return int(value) if value is not None else None
+    except (TypeError, ValueError):
+        return None
+
+
+async def _maybe_await(value: Any) -> None:
+    if asyncio.iscoroutine(value):
+        await value
+
+
 class VolcengineArkError(RuntimeError):
     """方舟调用失败。"""
+
+
+@dataclass
+class ChatCompletionResult:
+    """对话结果（含 usage，供上下文压缩计量）。"""
+
+    content: str
+    prompt_tokens: int | None = None
+    completion_tokens: int | None = None
+    total_tokens: int | None = None
 
 
 class VolcengineArkClient:
@@ -78,14 +101,14 @@ class VolcengineArkClient:
         return resp.json()
 
     # ---------- 对话 ----------
-    async def chat(
+    async def chat_completion(
         self,
         messages: list[dict[str, str]],
         *,
         model: str | None = None,
         temperature: float = 0.7,
-    ) -> str:
-        """调用对话模型，返回助手文本。"""
+    ) -> ChatCompletionResult:
+        """调用对话模型，返回文本 + usage。"""
         model_id = model or self.chat_model
         if not model_id:
             raise VolcengineArkError("未配置对话模型 ID（chat_model）")
@@ -99,9 +122,31 @@ class VolcengineArkClient:
             },
         )
         try:
-            return data["choices"][0]["message"]["content"]
+            content = data["choices"][0]["message"]["content"]
         except (KeyError, IndexError, TypeError) as exc:
             raise VolcengineArkError(f"对话响应解析失败: {data}") from exc
+        usage = data.get("usage") or {}
+        return ChatCompletionResult(
+            content=content if isinstance(content, str) else str(content),
+            prompt_tokens=_as_int(usage.get("prompt_tokens")),
+            completion_tokens=_as_int(usage.get("completion_tokens")),
+            total_tokens=_as_int(usage.get("total_tokens")),
+        )
+
+    async def chat(
+        self,
+        messages: list[dict[str, str]],
+        *,
+        model: str | None = None,
+        temperature: float = 0.7,
+    ) -> str:
+        """调用对话模型，返回助手文本。"""
+        result = await self.chat_completion(
+            messages,
+            model=model,
+            temperature=temperature,
+        )
+        return result.content
 
     # ---------- 生图 ----------
     async def generate_image(
@@ -112,22 +157,27 @@ class VolcengineArkClient:
         size: str = "2K",
         response_format: str = "url",
         watermark: bool = False,
+        image: str | list[str] | None = None,
     ) -> bytes:
-        """文生图，返回图片字节。"""
+        """文生图 / 图生图，返回图片字节。image 为 URL 或 data-url（可多张）。"""
         model_id = model or self.image_model
         if not model_id:
             raise VolcengineArkError("未配置生图模型 ID（image_model）")
 
+        body: dict[str, Any] = {
+            "model": model_id,
+            "prompt": prompt,
+            "size": size,
+            "response_format": response_format,
+            "watermark": watermark,
+        }
+        if image:
+            body["image"] = image
+
         data = await self._request(
             "POST",
             "/images/generations",
-            json_body={
-                "model": model_id,
-                "prompt": prompt,
-                "size": size,
-                "response_format": response_format,
-                "watermark": watermark,
-            },
+            json_body=body,
         )
         items = data.get("data") or []
         if not items:
@@ -170,8 +220,8 @@ class VolcengineArkClient:
             "model": model_id,
             "content": content,
         }
-        # 部分模型支持 ratio / duration，以 extra 字段尝试传递
-        if ratio:
+        # 首帧/首尾帧图生视频时，输出比例跟随首帧图，不可再传 ratio
+        if ratio and not image_url:
             body["ratio"] = ratio
         if duration is not None:
             body["duration"] = duration
@@ -200,8 +250,9 @@ class VolcengineArkClient:
         image_url: str | None = None,
         poll_interval: float = 8.0,
         max_wait: float = 600.0,
+        on_progress: Any | None = None,
     ) -> bytes:
-        """创建并轮询视频任务，成功后下载视频字节。"""
+        """创建并轮询视频任务，成功后下载视频字节。on_progress(status, elapsed, task_id)。"""
         task_id = await self.create_video_task(
             prompt,
             model=model,
@@ -210,11 +261,15 @@ class VolcengineArkClient:
             image_url=image_url,
         )
         logger.info("火山视频任务已创建: %s", task_id)
+        if on_progress:
+            await _maybe_await(on_progress("submitted", 0.0, task_id))
 
         elapsed = 0.0
         while elapsed < max_wait:
             result = await self.get_video_task(task_id)
-            status = result.get("status")
+            status = str(result.get("status") or "unknown")
+            if on_progress:
+                await _maybe_await(on_progress(status, elapsed, task_id))
             if status == "succeeded":
                 content = result.get("content") or {}
                 video_url = content.get("video_url")

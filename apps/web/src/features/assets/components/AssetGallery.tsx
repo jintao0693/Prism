@@ -65,12 +65,27 @@ export default function AssetGallery({
       </div>
 
       <div className={cn(styles.grid, pending && styles.pending)}>
+        {assets.length === 0 ? (
+          <p className={styles.empty}>暂无资产。在对话里生成图片/视频后会出现在这里。</p>
+        ) : null}
         {assets.map((asset) => (
           <article key={asset.id} className={styles.asset}>
-            <div className={cn(styles.media, `thumb-${asset.tone}`)} />
+            {asset.url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={asset.url}
+                alt={asset.name}
+                className={styles.mediaImg}
+              />
+            ) : (
+              <div className={cn(styles.media, `thumb-${asset.tone}`)} />
+            )}
             <div className={styles.cap}>
               <strong>{asset.name}</strong>
-              <span>{asset.meta}</span>
+              <span>
+                {asset.meta}
+                {asset.kind === "video" ? " · 视频" : ""}
+              </span>
             </div>
           </article>
         ))}

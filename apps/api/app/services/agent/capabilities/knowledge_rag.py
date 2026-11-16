@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pydantic_ai import Agent, RunContext
 
+from app.services.agent.asset_memory import read_asset_bytes, resolve_last_image_asset
 from app.services.agent.deps import PrismDeps
 from app.services.knowledge.search_image import search_image
 from app.services.knowledge.search_text import search_text
@@ -34,10 +35,17 @@ def register_knowledge_tools(agent: Agent[PrismDeps, str]) -> None:
 
     @agent.tool
     async def kb_search_image(ctx: RunContext[PrismDeps], query_hint: str = "") -> str:
-        """以图搜图（演示期用提示词近似）。"""
+        """以文搜图；若本会话有上一张图则优先以图搜图。"""
         deps = ctx.deps
         if not deps.knowledge_base_ids:
             return "未挂载知识库。"
+
+        last = await resolve_last_image_asset(
+            deps.db,
+            conversation_id=deps.conversation_id,
+            tenant_id=deps.tenant_id,
+        )
+        image_bytes = read_asset_bytes(last) if last else None
 
         lines: list[str] = []
         for kb_id in deps.knowledge_base_ids:
@@ -46,8 +54,10 @@ def register_knowledge_tools(agent: Agent[PrismDeps, str]) -> None:
                 tenant_id=deps.tenant_id,
                 knowledge_base_id=kb_id,
                 query_hint=query_hint or None,
+                image_bytes=image_bytes,
                 top_k=3,
             )
             for h in hits:
-                lines.append(f"{h.title} · 相似 {h.score} · {h.summary}")
+                extra = f" · {h.url}" if h.url else ""
+                lines.append(f"{h.title} · 相似 {h.score} · {h.summary}{extra}")
         return "\n".join(lines) if lines else "未找到相似图片。"

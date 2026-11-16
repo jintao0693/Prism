@@ -139,7 +139,7 @@ HTTP：
 docker compose -f ../../infra/docker-compose.yml up -d
 ```
 
-把 `DATABASE_URL` 改为 Postgres 后重启 API。
+把 `DATABASE_URL` 改为 Postgres 后重启 API。启动时会自动 `CREATE EXTENSION vector` 并建 `knowledge_vectors` 表；入库/重向量化会双写 JSON + pgvector，检索优先走 `<=>`。
 
 ---
 

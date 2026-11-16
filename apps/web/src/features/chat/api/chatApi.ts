@@ -1,4 +1,9 @@
-import { apiFetch, apiRequest, USE_MOCK } from "@/lib/api-client";
+import {
+  apiFetch,
+  apiRequest,
+  resolveMediaUrl,
+  USE_MOCK,
+} from "@/lib/api-client";
 import { mockDelay } from "@/lib/mock-delay";
 import type { ChatMessage, ConversationSummary, GenerationResult } from "@/types/domain";
 
@@ -47,10 +52,22 @@ function mapMessage(raw: Record<string, unknown>): ChatMessage {
     results = resultsRaw.map((item, i) => {
       const r = item as Record<string, unknown>;
       const tone = String(r.tone ?? "a");
+      const kind = String(r.kind ?? "");
       return {
         id: String(r.id ?? `r_${i}`),
         label: String(r.label ?? "结果"),
-        tone: (tone === "b" || tone === "c" ? tone : "a") as GenerationResult["tone"],
+        tone: (["a", "b", "c", "d", "e", "f"].includes(tone)
+          ? tone
+          : "a") as GenerationResult["tone"],
+        kind: kind === "video" ? "video" : kind === "image" ? "image" : undefined,
+        url: resolveMediaUrl(
+          r.url != null ? String(r.url) : undefined,
+        ),
+        parentAssetId: r.parentAssetId
+          ? String(r.parentAssetId)
+          : r.parent_asset_id
+            ? String(r.parent_asset_id)
+            : undefined,
       };
     });
   }
@@ -114,12 +131,44 @@ function consumeSseProgress(
         intentSource,
         status: `已识别意图：${intentLabel(intent)}`,
       });
+    } else if (event === "context.compacted") {
+      onProgress({
+        intent,
+        intentSource,
+        status: `上下文已压缩（第 ${Number(data.generation ?? 1)} 次），正在继续…`,
+      });
+    } else if (event === "context.ready") {
+      const turns = Number(data.historyCount ?? 0);
+      const hasSummary = Boolean(data.hasSummary);
+      onProgress({
+        intent,
+        intentSource,
+        status: hasSummary
+          ? `已载入摘要 + 上文 ${turns} 条…`
+          : turns > 0
+            ? `已载入上文 ${turns} 条，正在生成…`
+            : "无上文，正在生成…",
+      });
+    } else if (event === "tool.planned") {
+      onProgress({
+        intent,
+        intentSource,
+        status: `已规划工具：${String(data.tool ?? "chat")}`,
+      });
     } else if (event === "tool.start") {
       const name = String(data.name ?? "tool");
       onProgress({
         intent,
         intentSource,
         status: `正在执行：${name}`,
+      });
+    } else if (event === "media.progress") {
+      const status = String(data.status ?? "running");
+      const elapsed = Number(data.elapsedSec ?? 0);
+      onProgress({
+        intent,
+        intentSource,
+        status: `视频任务 ${status}${elapsed ? ` · ${elapsed}s` : ""}`,
       });
     } else if (event === "tool.result") {
       onProgress({
@@ -135,6 +184,36 @@ function consumeSseProgress(
       });
     }
   }
+}
+
+/** 按帧消费 SSE，边收边回调进度（避免整包缓冲）。 */
+async function consumeSseStream(
+  response: Response,
+  onProgress?: (progress: AgentProgress) => void,
+): Promise<void> {
+  if (!onProgress) {
+    await response.text();
+    return;
+  }
+  if (!response.body) {
+    const text = await response.text();
+    consumeSseProgress(text, onProgress);
+    return;
+  }
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const parts = buffer.split("\n\n");
+    buffer = parts.pop() ?? "";
+    for (const part of parts) {
+      if (part.trim()) consumeSseProgress(`${part}\n\n`, onProgress);
+    }
+  }
+  if (buffer.trim()) consumeSseProgress(`${buffer}\n\n`, onProgress);
 }
 
 export async function listConversations(
@@ -247,7 +326,6 @@ export async function sendMessage(
     throw new Error(text || `发送失败 (${response.status})`);
   }
 
-  const sseText = await response.text();
-  consumeSseProgress(sseText, onProgress);
+  await consumeSseStream(response, onProgress);
   return getConversationMessages(conversationId, workspaceId);
 }

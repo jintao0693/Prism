@@ -18,7 +18,20 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
       {message.results && message.results.length > 0 ? (
         <div className={styles.results}>
           {message.results.map((r) => (
-            <div key={r.id} className={cn(styles.result, `thumb-${r.tone}`)}>
+            <div key={r.id} className={cn(styles.result, !r.url && `thumb-${r.tone}`)}>
+              {r.url && r.kind !== "video" ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={r.url} alt={r.label} className={styles.resultImg} />
+              ) : null}
+              {r.url && r.kind === "video" ? (
+                <video
+                  className={styles.resultImg}
+                  src={r.url}
+                  muted
+                  playsInline
+                  preload="metadata"
+                />
+              ) : null}
               <span>{r.label}</span>
             </div>
           ))}

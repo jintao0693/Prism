@@ -15,7 +15,9 @@
 | 产品 MVP 骨架 | ✅ 基本完成 | 登录、工作空间、对话、知识库、资产、设置页 |
 | 前后端联调 | ✅ 已接通 | 登录→工作空间→对话 SSE→知识库/资产/设置 |
 | 意图识别 | ✅ 已上线 | 对话模型分类 chat/image/video/knowledge，失败回退正则 |
-| 多模态知识库 | 🔄 半成品 | 文本检索/以文搜图可用；上传文件、真·以图搜图、片段检索未做 |
+| 多轮上下文 | ✅ 已上线 | 滑动窗 + 摘要检查点；usage 触发自动压缩；压缩后重注工作区/KB；手动 `POST .../compact` |
+| 多模态 Agent | ✅ 工具编排 | 统一 `tool_runner`：文/图生图、文/图生视频、KB；资产记忆；SSE 真流式 + `media.progress`；游戏向 3 案例已过 |
+| 多模态知识库 | ✅ 图片链路已通 | 入库/检索/以图搜图/补齐向量/批量上传；Postgres 走 pgvector，SQLite JSON 回退；视频片段仍未做 |
 | 页面表达 | 🔄 已纠偏 | 去掉假上传/夸大文案；对话显示意图进度并可勾选知识库 |
 | 火山方舟接入 | ✅ 代码完成 | Chat / Seedream / Seedance / Embedding；需自备 Key 验收 |
 | 开源基建 | ✅ 完成 | MIT、AUTHORS、CI、Issue/PR 模板、CONTRIBUTING 等 |
@@ -44,7 +46,9 @@
 - [x] 鉴权 JWT；租户 / 工作空间隔离头
 - [x] Agent 演示模式 + 火山 Chat 优先
 - [x] Media Gateway：Demo / Volcengine（生图、生视频）
-- [x] 知识库入库 / 文本检索 / 图搜（multimodal embedding）
+- [x] 知识库：文档/图片入库、条目列表、文本检索、以文搜图、真·以图搜图、重新/批量补齐向量、批量上传进度
+- [x] 种子媒体回填真实 PNG；资产中心 `/media` 缩略图
+- [x] 向量索引：Postgres `knowledge_vectors` + pgvector；SQLite 回退 `embedding_json`
 - [x] 租户级 Provider 配置（Key 加密存储）
 - [x] 密码哈希改为随机 salt（不绑 `SECRET_KEY`）；演示账号可自动修哈希
 - [x] CORS 默认含 `localhost` 与 `127.0.0.1`
@@ -75,10 +79,19 @@
 ### Now（本周继续）
 
 1. ~~进度文档~~ → 本文  
-2. 合入 P0 修复 + 补充测试并推送  
+2. ~~多模态 P0 + 游戏向 3 案例联调~~ → [GAME_CASES.md](GAME_CASES.md)  
 3. Alembic 初始迁移（替代纯 `create_all`）  
 4. 联调体验：任务进度、错误文案、空状态  
 5. README 加截图 / 演示 GIF（**需要你**：本地跑通后截几张，或授权我用浏览器截）
+
+### 多模态 Agent 下一步优化
+
+1. 方舟原生 function call 多步规划（替换意图+规则选工具）  
+2. 对话内上传参考图 → 直接 i2i / i2v  
+3. Chat `stream=true` 真 token 增量  
+4. Seedream/Seedance 提示词编译器（品牌色/比例/时长/负面词）  
+5. 视频异步 Job + Worker（HTTP 只订阅进度）  
+6. 资产中心选图送回会话作参考  
 
 ### Next（Phase 2 前）
 
@@ -119,6 +132,9 @@ npm run dev
 cd apps/api
 python -m ruff check app
 python -m pytest -q
+
+# 游戏向多模态联调（需本机 API + 已配火山 Key）
+python ../../scripts/run_game_cases.py
 ```
 
 ---
@@ -132,6 +148,9 @@ python -m pytest -q
 | Docker 全栈 SSR 调不通 | Web 容器需 `API_BASE_URL=http://api:8000/api/v1`，浏览器侧仍用 `localhost:8000` |
 | Makefile 在 Windows | 优先用 `scripts/dev.ps1`；Makefile 面向 Unix |
 | Worker | `app/worker.py` 仍为占位，任务目前偏进程内 |
+| 图片向量化失败 | 方舟要求边长 ≥ 14px；可入库后点「重新向量化 / 补齐向量」 |
+| pgvector | Compose 用 `pgvector/pgvector:pg16`；本地默认 SQLite 仍走 `embedding_json` 全表扫 |
+| 图生视频 400 `ratio` | 首帧/首尾帧任务不要传 `ratio`（已跟首帧图走）；见 `create_video_task` |
 
 ---
 
@@ -140,6 +159,7 @@ python -m pytest -q
 | 文档 | 用途 |
 |------|------|
 | [PROGRESS.md](PROGRESS.md) | **当前进度（本文）** |
+| [GAME_CASES.md](GAME_CASES.md) | 游戏向 3 案例联调记录 |
 | [../ROADMAP.md](../ROADMAP.md) | 中长期里程碑 |
 | [../CHANGELOG.md](../CHANGELOG.md) | 已发布变更 |
 | [PRODUCT.md](PRODUCT.md) | 产品范围 |

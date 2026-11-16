@@ -48,6 +48,8 @@ async def init_db() -> None:
     """创建全部表（开发期便捷；生产请走 Alembic）。"""
     # 导入模型以注册 metadata
     from app import models  # noqa: F401
+    from app.core.schema_migrate import ensure_runtime_schema
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    await ensure_runtime_schema(engine)

@@ -1,10 +1,20 @@
 .layout {
   display: grid;
-  grid-template-columns: 1fr 1.1fr;
+  grid-template-columns: minmax(280px, 0.95fr) 1.15fr;
   gap: 16px;
+  align-items: start;
 }
 
-.left {
+.leftCol,
+.rightCol {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.left,
+.ingest {
   padding: 16px;
 }
 
@@ -26,11 +36,6 @@
   color: var(--muted);
 }
 
-.tab:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
 .tabActive {
   background: #fff;
   color: var(--ink);
@@ -48,14 +53,15 @@
   line-height: 1.55;
 }
 
-.notice strong {
-  color: var(--ink);
-  font-weight: 600;
-}
-
 .error {
   margin: 0 0 10px;
   color: #b42318;
+  font-size: 13px;
+}
+
+.status {
+  margin: 0 0 10px;
+  color: var(--accent);
   font-size: 13px;
 }
 
@@ -72,26 +78,148 @@
 .search {
   display: flex;
   gap: 8px;
-  margin-bottom: 14px;
+  margin-bottom: 8px;
 }
 
-.search input {
-  flex: 1;
+.search input,
+.docForm input,
+.docForm textarea {
+  width: 100%;
   border: 1px solid var(--line);
   border-radius: 11px;
   padding: 11px 12px;
   outline: none;
   background: #fff;
+  font: inherit;
 }
 
-.search input:focus {
+.search input {
+  flex: 1;
+}
+
+.search input:focus,
+.docForm input:focus,
+.docForm textarea:focus {
   border-color: #9bb8b5;
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
-.note {
-  margin: 0;
+.queryImage {
+  margin-bottom: 12px;
+}
+
+.queryPreview {
+  display: block;
+  width: 100%;
+  max-height: 180px;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  margin-bottom: 8px;
+  background: var(--canvas);
+}
+
+.dropzone {
+  width: 100%;
+  min-height: 120px;
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  background: #fafbfc;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.queryImageActions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.ingest h3,
+.sectionTitle {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.ingestHint {
+  margin: 0 0 12px;
   font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.ingestActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.progressWrap {
+  margin-bottom: 14px;
+}
+
+.progressBar {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--canvas);
+  overflow: hidden;
+  border: 1px solid var(--line);
+}
+
+.progressFill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.2s ease;
+}
+
+.progressLabel {
+  margin: 6px 0 0;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.reembedBtn {
+  margin-top: 6px;
+  align-self: flex-start;
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.reembedBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.docForm {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.docForm textarea {
+  resize: vertical;
+  min-height: 88px;
+}
+
+.hits,
+.items {
+  min-width: 0;
+}
+
+.count {
+  margin-left: 8px;
+  font-size: 12px;
+  font-weight: 600;
   color: var(--muted);
 }
 
@@ -106,8 +234,13 @@
   background: #fff;
 }
 
-.preview {
+.preview,
+.previewImg {
+  width: 72px;
+  height: 72px;
   border-radius: 10px;
+  object-fit: cover;
+  background: var(--canvas);
 }
 
 .hit h4 {
@@ -122,15 +255,70 @@
   line-height: 1.5;
 }
 
-.score {
+.score,
+.badge {
   display: inline-block;
   margin-top: 8px;
+  margin-right: 6px;
   font-size: 11px;
   font-weight: 600;
-  color: var(--accent);
-  background: var(--accent-soft);
   padding: 3px 8px;
   border-radius: 999px;
+}
+
+.score {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.badge {
+  color: var(--muted);
+  background: var(--canvas);
+}
+
+.itemGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+.item {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.itemThumb {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  background: var(--canvas);
+}
+
+.itemDoc {
+  background: linear-gradient(135deg, #eef2f4, #dfe8e6);
+}
+
+.itemMeta {
+  padding: 8px 10px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.itemMeta strong {
+  font-size: 12px;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.itemMeta span {
+  font-size: 11px;
+  color: var(--muted);
 }
 
 @media (max-width: 900px) {

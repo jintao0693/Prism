@@ -1,4 +1,4 @@
-import { apiRequest, USE_MOCK } from "@/lib/api-client";
+import { apiRequest, resolveMediaUrl, USE_MOCK } from "@/lib/api-client";
 import { mockDelay } from "@/lib/mock-delay";
 import type { AssetItem, AssetKind } from "@/types/domain";
 
@@ -56,7 +56,7 @@ function mapAsset(raw: Record<string, unknown>): AssetItem {
     kind,
     meta: String(raw.meta ?? ""),
     tone: tone as AssetItem["tone"],
-    url: raw.url ? String(raw.url) : undefined,
+    url: resolveMediaUrl(raw.url != null ? String(raw.url) : undefined),
   };
 }
 

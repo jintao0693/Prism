@@ -42,6 +42,12 @@ class Settings(BaseSettings):
     openai_api_key: str | None = None
     agent_demo_mode: bool = True
 
+    # 上下文窗口 / 自动压缩（借鉴 Codex：usage 触发 + 摘要检查点）
+    context_window_tokens: int = 32_000
+    context_compact_ratio: float = 0.85
+    context_keep_recent_messages: int = 12
+    context_compact_min_messages: int = 10
+
     # CORS：逗号分隔（Windows 上常混用 localhost / 127.0.0.1）
     cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
 

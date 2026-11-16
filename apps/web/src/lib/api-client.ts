@@ -31,6 +31,32 @@ export class ApiError extends Error {
   }
 }
 
+/** 尽量抽出 FastAPI `detail` 文案，避免把整段 JSON 丢给用户。 */
+function formatApiError(text: string, fallback: string): string {
+  const raw = (text || "").trim();
+  if (!raw) return fallback || "请求失败";
+  try {
+    const parsed = JSON.parse(raw) as { detail?: unknown };
+    const detail = parsed.detail;
+    if (typeof detail === "string") return detail;
+    if (Array.isArray(detail)) {
+      return detail
+        .map((item) => {
+          if (typeof item === "string") return item;
+          if (item && typeof item === "object" && "msg" in item) {
+            return String((item as { msg: unknown }).msg);
+          }
+          return JSON.stringify(item);
+        })
+        .filter(Boolean)
+        .join("；");
+    }
+  } catch {
+    // 非 JSON 时原样返回
+  }
+  return raw.length > 280 ? `${raw.slice(0, 280)}…` : raw;
+}
+
 export interface RequestContext {
   tenantId?: string;
   workspaceId?: string;
@@ -49,6 +75,21 @@ export function getRequestContext(): RequestContext {
 
 export function getApiBaseUrl(): string {
   return resolveApiBase();
+}
+
+/** 将后端 `/media/...` 相对路径拼成浏览器可访问的绝对 URL。 */
+export function resolveMediaUrl(path?: string | null): string | undefined {
+  if (!path) return undefined;
+  if (
+    path.startsWith("http://") ||
+    path.startsWith("https://") ||
+    path.startsWith("data:") ||
+    path.startsWith("blob:")
+  ) {
+    return path;
+  }
+  const origin = resolveApiBase().replace(/\/api\/v1\/?$/, "");
+  return `${origin}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
 async function resolveAuth(
@@ -85,7 +126,10 @@ async function buildHeaders(
 ): Promise<Headers> {
   const auth = await resolveAuth(overrides);
   const headers = new Headers(init.headers);
-  if (!headers.has("Content-Type") && init.body) {
+  const isFormData =
+    typeof FormData !== "undefined" && init.body instanceof FormData;
+  // FormData 需由浏览器自带 multipart boundary，不可强制 JSON
+  if (!headers.has("Content-Type") && init.body && !isFormData) {
     headers.set("Content-Type", "application/json");
   }
   if (auth.token) {
@@ -130,7 +174,7 @@ export async function apiRequest<T>(
 
   if (!response.ok) {
     const text = await response.text();
-    throw new ApiError(text || response.statusText, response.status);
+    throw new ApiError(formatApiError(text, response.statusText), response.status);
   }
 
   if (response.status === 204) {

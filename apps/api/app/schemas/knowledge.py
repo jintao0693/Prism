@@ -23,6 +23,23 @@ class KnowledgeHitOut(BaseModel):
     summary: str
     score: float
     tone: str
+    item_type: str = Field(default="image", alias="itemType")
+    url: str | None = None
+
+    model_config = {"populate_by_name": True}
+
+
+class KnowledgeItemOut(BaseModel):
+    """知识库条目。"""
+
+    id: str
+    title: str
+    item_type: str = Field(alias="itemType")
+    summary: str = ""
+    url: str | None = None
+    has_embedding: bool = Field(alias="hasEmbedding", default=False)
+
+    model_config = {"populate_by_name": True}
 
 
 class SearchTextRequest(BaseModel):
@@ -35,7 +52,7 @@ class SearchTextRequest(BaseModel):
 
 
 class SearchImageRequest(BaseModel):
-    """图搜图（演示：可用 query 提示代替真实图像向量）。"""
+    """以文搜图 / 兼容旧客户端。"""
 
     query_hint: str | None = Field(default=None, alias="queryHint")
     asset_id: str | None = Field(default=None, alias="assetId")
@@ -49,3 +66,10 @@ class KnowledgeBaseCreate(BaseModel):
 
     name: str
     description: str = ""
+
+
+class DocumentIngestRequest(BaseModel):
+    """文本入库。"""
+
+    title: str = Field(min_length=1)
+    content: str = Field(min_length=1)

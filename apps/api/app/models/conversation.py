@@ -1,6 +1,8 @@
 """对话与消息。"""
 
-from sqlalchemy import ForeignKey, String, Text
+from datetime import datetime
+
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.db import Base
@@ -16,6 +18,17 @@ class Conversation(Base, TimestampMixin, WorkspaceScopedMixin):
     title: Mapped[str] = mapped_column(String(255), nullable=False, default="新对话")
     # chat | image | video
     kind: Mapped[str] = mapped_column(String(32), nullable=False, default="chat")
+
+    # Codex 风格压缩检查点：全量消息仍保留，模型窗口从摘要 + 压缩后新消息重建
+    summary_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    compacted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+    compact_generation: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    context_tokens_estimate: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    last_prompt_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    last_completion_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     messages: Mapped[list["Message"]] = relationship(
         back_populates="conversation",

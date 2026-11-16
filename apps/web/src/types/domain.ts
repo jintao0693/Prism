@@ -38,7 +38,10 @@ export type MessageRole = "user" | "assistant";
 export interface GenerationResult {
   id: string;
   label: string;
-  tone: "a" | "b" | "c";
+  tone: "a" | "b" | "c" | "d" | "e" | "f";
+  kind?: "image" | "video";
+  url?: string;
+  parentAssetId?: string;
 }
 
 export interface ChatMessage {
@@ -63,7 +66,18 @@ export interface KnowledgeHit {
   title: string;
   summary: string;
   score: number;
-  tone: "a" | "b" | "c";
+  tone: "a" | "b" | "c" | "d" | "e" | "f";
+  itemType?: "document" | "image";
+  url?: string;
+}
+
+export interface KnowledgeItem {
+  id: string;
+  title: string;
+  itemType: "document" | "image";
+  summary: string;
+  url?: string;
+  hasEmbedding: boolean;
 }
 
 export type AssetKind = "image" | "video";

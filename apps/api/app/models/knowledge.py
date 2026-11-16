@@ -40,7 +40,7 @@ class KnowledgeItem(Base, TimestampMixin):
     title: Mapped[str] = mapped_column(String(255), nullable=False, default="")
     content: Mapped[str] = mapped_column(Text, nullable=False, default="")
     storage_key: Mapped[str | None] = mapped_column(String(512), nullable=True)
-    # 向量序列化占位（生产应迁 pgvector / 外部向量库）
+    # SQLite / 兜底：JSON 向量；Postgres 同步写入 knowledge_vectors (pgvector)
     embedding_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     # 图搜演示用相似度标签
     tone: Mapped[str] = mapped_column(String(8), nullable=False, default="a")

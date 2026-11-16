@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from collections.abc import Awaitable, Callable
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,6 +12,8 @@ from app.services.media.providers.base import MediaProvider, MediaResult
 from app.services.media.providers.demo import DemoMediaProvider
 from app.services.media.providers.volcengine import VolcengineMediaProvider
 from app.services.providers.registry import build_volcengine_client
+
+ProgressCallback = Callable[[str, float, str], Awaitable[None] | None]
 
 
 class MediaGateway:
@@ -70,12 +73,22 @@ class MediaGateway:
         mode: str = "text_to_video",
         image_bytes: bytes | None = None,
         duration: int = 5,
+        on_progress: ProgressCallback | None = None,
     ) -> tuple[str, MediaResult, str]:
         """生成视频并写入存储。"""
         if mode == "image_to_video" and image_bytes:
-            result = await self.provider.image_to_video(prompt, image_bytes=image_bytes)
+            result = await self.provider.image_to_video(
+                prompt,
+                image_bytes=image_bytes,
+                duration=duration,
+                on_progress=on_progress,
+            )
         else:
-            result = await self.provider.text_to_video(prompt, duration=duration)
+            result = await self.provider.text_to_video(
+                prompt,
+                duration=duration,
+                on_progress=on_progress,
+            )
 
         asset_id = f"asset_{uuid.uuid4().hex[:12]}"
         key = self.storage.build_key(

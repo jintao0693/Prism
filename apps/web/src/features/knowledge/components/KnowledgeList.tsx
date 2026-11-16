@@ -43,7 +43,7 @@ export default function KnowledgeList({
     <div className="page-enter">
       <PageHeader
         title="知识库"
-        description="已支持：文本检索、以文搜图。上传文件/真·以图搜图/视频片段检索尚未上线。"
+        description="已支持：图片入库、文本检索、以文搜图、以图搜图。视频片段检索仍在规划中。"
         actions={
           <Button onClick={handleCreate} disabled={pending}>
             {pending ? "创建中…" : "新建知识库"}
@@ -55,7 +55,7 @@ export default function KnowledgeList({
         {bases.length === 0 ? (
           <Panel className={styles.empty}>
             <h3>还没有知识库</h3>
-            <p>先新建一个，再在详情页用关键词检索种子/入库文档。</p>
+            <p>先新建一个，再上传图片或写入文档，即可文本检索 / 以文搜图 / 以图搜图。</p>
           </Panel>
         ) : null}
         {bases.map((kb) => (

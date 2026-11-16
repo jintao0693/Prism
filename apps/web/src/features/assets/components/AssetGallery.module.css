@@ -38,8 +38,21 @@
   background: #fff;
 }
 
-.media {
+.media,
+.mediaImg {
   aspect-ratio: 1;
+  width: 100%;
+  display: block;
+  object-fit: cover;
+  background: var(--canvas);
+}
+
+.empty {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 24px;
+  color: var(--muted);
+  font-size: 13px;
 }
 
 .cap {

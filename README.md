@@ -35,9 +35,9 @@ Prism 面向营销与内容团队，把「查品牌知识 → 出图出片 → �
 | 模块 | 能力 | 说明 |
 |------|------|------|
 | 账号 / 租户 | 登录、工作空间隔离 | JWT + `X-Workspace-Id` |
-| 对话 Agent | 文本问答、生图、生视频 | 有火山 Key 走方舟，否则演示模式 |
-| 知识库 | 上传、文本检索、图搜图 | 向量走方舟 multimodal embedding |
-| 资产 | 列表 / 预览 / 标签 | 与生成任务联动 |
+| 对话 Agent | 文本问答、文/图生图、文/图生视频、KB 工具编排 | 意图+规则选工具；资产记忆；有 Key 走方舟 |
+| 知识库 | 文档/图片入库、文本检索、图搜图 | 向量走方舟 multimodal embedding |
+| 资产 | 列表 / 预览 / 标签 / 生成血缘 | 与对话生成任务联动 |
 | 设置 | 火山方舟配置、连通测试 | 对话 / 生图 / 视频 / 向量四类模型 |
 | 基础设施 | Docker Compose | Postgres / Redis / MinIO（可选） |
 
@@ -183,6 +183,7 @@ docker compose -f infra/docker-compose.yml --profile full up -d --build
 | [docs/STRUCTURE.md](docs/STRUCTURE.md) | Monorepo 目录与分包约定 |
 | [docs/IA.md](docs/IA.md) | 页面信息架构 |
 | [docs/PROGRESS.md](docs/PROGRESS.md) | **当前开发进度**（做到哪了） |
+| [docs/GAME_CASES.md](docs/GAME_CASES.md) | 游戏向 3 案例联调（KB / 生图改稿 / 图生视频） |
 | [ROADMAP.md](ROADMAP.md) | 近期 / Phase 2 / Phase 3 路线图 |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | 如何贡献 |
 | [SECURITY.md](SECURITY.md) | 安全披露 |

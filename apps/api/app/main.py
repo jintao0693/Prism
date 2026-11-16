@@ -11,10 +11,12 @@ from fastapi.staticfiles import StaticFiles
 
 from app.api.v1.router import api_router
 from app.bootstrap.seed import seed_demo_data
+from app.bootstrap.seed_media import ensure_demo_media
 from app.core.config import get_settings
 from app.core.db import SessionLocal, init_db
 from app.core.logging import setup_logging
 from app.core.redis import close_redis
+from app.services.knowledge.vector_store import ensure_vector_schema
 
 
 @asynccontextmanager
@@ -28,8 +30,10 @@ async def lifespan(_app: FastAPI):
     Path(settings.local_storage_dir).mkdir(parents=True, exist_ok=True)
 
     await init_db()
+    await ensure_vector_schema()
     async with SessionLocal() as session:
         await seed_demo_data(session)
+        await ensure_demo_media(session)
 
     yield
     await close_redis()

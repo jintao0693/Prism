@@ -2,25 +2,10 @@
 
 from __future__ import annotations
 
-import struct
-import zlib
+import asyncio
 
-from app.services.media.providers.base import MediaProvider, MediaResult
-
-
-def _png_placeholder(width: int = 64, height: int = 64) -> bytes:
-    """生成极简纯色 PNG，便于联调存储链路。"""
-
-    def chunk(tag: bytes, data: bytes) -> bytes:
-        return struct.pack(">I", len(data)) + tag + data + struct.pack(">I", zlib.crc32(tag + data) & 0xFFFFFFFF)
-
-    raw = b"".join(b"\x00" + bytes([15, 110, 106, 255]) * width for _ in range(height))
-    return (
-        b"\x89PNG\r\n\x1a\n"
-        + chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0))
-        + chunk(b"IDAT", zlib.compress(raw))
-        + chunk(b"IEND", b"")
-    )
+from app.bootstrap.png_util import solid_png
+from app.services.media.providers.base import MediaProvider, MediaResult, ProgressCallback
 
 
 class DemoMediaProvider(MediaProvider):
@@ -31,7 +16,7 @@ class DemoMediaProvider(MediaProvider):
     async def text_to_image(self, prompt: str, *, size: str = "1024x1024") -> MediaResult:
         _ = size
         return MediaResult(
-            data=_png_placeholder(),
+            data=solid_png(64, 64, (15, 110, 106)),
             mime_type="image/png",
             filename="demo_image.png",
             meta=f"demo text_to_image · {prompt[:40]}",
@@ -39,10 +24,24 @@ class DemoMediaProvider(MediaProvider):
 
     async def image_to_image(self, prompt: str, *, image_bytes: bytes) -> MediaResult:
         _ = image_bytes
-        return await self.text_to_image(prompt)
+        return MediaResult(
+            data=solid_png(64, 64, (232, 168, 56)),
+            mime_type="image/png",
+            filename="demo_image_edit.png",
+            meta=f"demo image_to_image · {prompt[:40]}",
+        )
 
-    async def text_to_video(self, prompt: str, *, duration: int = 5) -> MediaResult:
-        # 最小假视频文件头（并非可播完整 mp4，仅占位）
+    async def text_to_video(
+        self,
+        prompt: str,
+        *,
+        duration: int = 5,
+        on_progress: ProgressCallback | None = None,
+    ) -> MediaResult:
+        if on_progress:
+            value = on_progress("succeeded", 0.0, "demo_task")
+            if asyncio.iscoroutine(value):
+                await value
         data = b"\x00\x00\x00\x18ftypmp42" + prompt.encode("utf-8")[:32]
         return MediaResult(
             data=data,
@@ -51,6 +50,17 @@ class DemoMediaProvider(MediaProvider):
             meta=f"demo text_to_video · {duration}s · {prompt[:40]}",
         )
 
-    async def image_to_video(self, prompt: str, *, image_bytes: bytes) -> MediaResult:
+    async def image_to_video(
+        self,
+        prompt: str,
+        *,
+        image_bytes: bytes,
+        duration: int = 5,
+        on_progress: ProgressCallback | None = None,
+    ) -> MediaResult:
         _ = image_bytes
-        return await self.text_to_video(prompt)
+        return await self.text_to_video(
+            prompt,
+            duration=duration,
+            on_progress=on_progress,
+        )

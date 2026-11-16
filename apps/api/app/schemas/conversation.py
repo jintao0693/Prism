@@ -23,6 +23,11 @@ class GenerationResultOut(BaseModel):
     id: str
     label: str
     tone: str
+    kind: str | None = None
+    url: str | None = None
+    parent_asset_id: str | None = Field(default=None, alias="parentAssetId")
+
+    model_config = {"populate_by_name": True}
 
 
 class ChatMessageOut(BaseModel):
@@ -52,6 +57,18 @@ class ConversationCreate(BaseModel):
 
     title: str = "新对话"
     kind: str = "chat"
+
+
+class CompactOut(BaseModel):
+    """手动 / 自动压缩结果。"""
+
+    did_compact: bool = Field(alias="didCompact")
+    generation: int
+    summary_chars: int = Field(alias="summaryChars", default=0)
+    reason: str = ""
+    context_tokens_estimate: int = Field(alias="contextTokensEstimate", default=0)
+
+    model_config = {"populate_by_name": True}
 
 
 class SseEvent(BaseModel):
