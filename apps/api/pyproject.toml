@@ -4,6 +4,10 @@ version = "0.1.0"
 description = "Prism 多模态 Agent 后端（FastAPI + Pydantic AI Harness）"
 readme = "README.md"
 requires-python = ">=3.11"
+authors = [
+  { name = "jintao", email = "jintao0693@users.noreply.github.com" },
+]
+urls = { Homepage = "https://github.com/jintao0693/Prism", Repository = "https://github.com/jintao0693/Prism" }
 dependencies = [
   "fastapi>=0.115.0",
   "uvicorn[standard]>=0.32.0",

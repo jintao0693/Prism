@@ -1,6 +1,7 @@
 # Prism 技术文档
 
-> 版本：v0.1（草案，待确认）  
+> 版本：v0.1  
+> 作者 / 开发者：**jintao**（[@jintao0693](https://github.com/jintao0693)）  
 > 对应产品文档：`docs/PRODUCT.md`  
 > 原则：参考开源能力与流程，自建多租户云端底座；不 fork bony-agent 等整仓。
 
@@ -64,7 +65,7 @@ Phase 2+: Publish Svc（社媒）  Phase 3+: Ads Svc（巨量/Meta）
 | 鉴权 | Clerk / Auth0 / 自建 OIDC | 组织 = 租户；JWT 含 `tenant_id` + `role` |
 | 观测 | OpenTelemetry + Loki/Sentry | 按租户维度打点 |
 
-> 仓库现状为空项目；实现阶段再锁定「Python 全栈」或「TS 前端 + Python Agent」双仓/单仓 Monorepo。
+> 仓库已落地为 Monorepo：`apps/web`（Next.js）+ `apps/api`（FastAPI）；火山方舟 Chat / Seedream / Seedance / Embedding 已接入租户级配置。
 
 ---
 

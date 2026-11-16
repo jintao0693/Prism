@@ -1,6 +1,7 @@
 # Prism 代码目录与结构
 
 > 仓库形态：**Monorepo**  
+> 作者 / 开发者：**jintao**（[@jintao0693](https://github.com/jintao0693)）  
 > 默认栈（已选定）：**Next.js（App Router）+ TypeScript 前端 + FastAPI 后端 + Pydantic AI Harness + PostgreSQL/pgvector + Redis + S3 兼容存储**  
 > 原则：按业务域分包，MVP 只建会用到的目录；Phase 2/3 目录可先占位空 `__init__` / README，不写死逻辑。
 

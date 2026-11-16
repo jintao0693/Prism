@@ -1,6 +1,7 @@
 # Prism 页面信息架构（MVP）
 
 > 品牌：Prism · UI：中文 · 层级：租户 → 工作空间 → 业务页  
+> 作者 / 开发者：**jintao**（[@jintao0693](https://github.com/jintao0693)）  
 > 视觉草稿：`design/prism-ui/index.html`（浏览器打开预览）
 
 ---
