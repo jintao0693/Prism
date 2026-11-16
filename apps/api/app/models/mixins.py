@@ -1,6 +1,6 @@
 """模型公共字段混入。"""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import DateTime, String
 from sqlalchemy.orm import Mapped, mapped_column
@@ -8,7 +8,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 def utcnow() -> datetime:
     """当前 UTC 时间。"""
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 class TimestampMixin:

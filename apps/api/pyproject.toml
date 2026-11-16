@@ -43,8 +43,20 @@ packages = ["app"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 pythonpath = ["."]
 
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "RUF"]
+ignore = [
+  "E501",  # 行宽由 formatter 管
+  "B008",  # FastAPI Depends/Query 默认参数是惯用法
+  "B904",  # raise from 逐步收紧
+  "RUF001",  # 中文全角标点
+  "RUF002",
+  "RUF003",
+]

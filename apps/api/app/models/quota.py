@@ -4,7 +4,7 @@ from sqlalchemy import Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.db import Base
-from app.models.mixins import TimestampMixin, TenantScopedMixin
+from app.models.mixins import TenantScopedMixin, TimestampMixin
 
 
 class QuotaUsage(Base, TimestampMixin, TenantScopedMixin):

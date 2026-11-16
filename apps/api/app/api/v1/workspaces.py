@@ -1,6 +1,6 @@
 """工作空间接口。"""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends
 from sqlalchemy import func, select
@@ -18,9 +18,9 @@ router = APIRouter(prefix="/workspaces", tags=["工作空间"])
 
 def _relative_label(dt: datetime) -> str:
     """简易相对时间文案。"""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
+        dt = dt.replace(tzinfo=UTC)
     delta = now - dt
     hours = int(delta.total_seconds() // 3600)
     if hours < 1:

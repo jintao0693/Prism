@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import uuid
+from datetime import UTC
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -186,7 +187,7 @@ async def seed_demo_data(session: AsyncSession) -> None:
 
     from datetime import datetime
 
-    ym = datetime.utcnow().strftime("%Y-%m")
+    ym = datetime.now(tz=UTC).strftime("%Y-%m")
     quota = QuotaUsage(
         id=str(uuid.uuid4()),
         tenant_id=TENANT_ID,

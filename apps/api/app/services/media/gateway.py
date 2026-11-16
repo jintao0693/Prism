@@ -29,7 +29,7 @@ class MediaGateway:
         cls,
         session: AsyncSession,
         tenant_id: str,
-    ) -> "MediaGateway":
+    ) -> MediaGateway:
         """根据租户配置选择火山或演示 Provider。"""
         client = await build_volcengine_client(session, tenant_id)
         if client:

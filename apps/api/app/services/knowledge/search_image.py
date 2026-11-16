@@ -44,7 +44,7 @@ async def search_image(
                 query_vec = await client.embed_image_url(data_url)
             elif query_hint:
                 query_vec = await client.embed_text(query_hint)
-        except Exception:  # noqa: BLE001
+        except Exception:
             query_vec = None
 
     hint = (query_hint or "").lower()

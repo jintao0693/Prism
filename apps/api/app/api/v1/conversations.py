@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
@@ -71,7 +71,7 @@ async def list_conversations(
                 id=c.id,
                 title=c.title,
                 kind=c.kind,
-                updatedAtLabel=c.updated_at.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M"),
+                updatedAtLabel=c.updated_at.astimezone(UTC).strftime("%Y-%m-%d %H:%M"),
                 thumbTone=tones[i % 3],
             ),
         )
@@ -175,7 +175,7 @@ async def send_message(
             results_json=json.dumps(results, ensure_ascii=False) if results else None,
         )
         db.add(assistant)
-        conv.updated_at = datetime.now(timezone.utc)
+        conv.updated_at = datetime.now(UTC)
         await db.commit()
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")

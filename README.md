@@ -2,6 +2,7 @@
 
 **多租户 SaaS 多模态 Agent 平台** — 用对话完成品牌知识检索、图片/视频生成、素材归档；后续覆盖社媒矩阵发布与付费投放（巨量 / Meta）。
 
+[![CI](https://github.com/jintao0693/Prism/actions/workflows/ci.yml/badge.svg)](https://github.com/jintao0693/Prism/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.11+-green.svg)](apps/api)
 [![Next.js](https://img.shields.io/badge/Next.js-15-black.svg)](apps/web)
@@ -11,6 +12,7 @@
 | **开发者** | [jintao](https://github.com/jintao0693)（`jintao0693`） |
 | **仓库** | https://github.com/jintao0693/Prism |
 | **状态** | MVP 进行中（对话 / 知识库 / 资产 / 火山方舟已接通） |
+| **路线图** | [ROADMAP.md](ROADMAP.md) |
 | **许可** | MIT |
 
 ---
@@ -81,22 +83,27 @@ Prism/
 
 - Node.js 20+
 - Python 3.11+
-- （可选）Docker：跑 Postgres / Redis / MinIO
+- （可选）Docker：跑依赖或全栈
+
+### 0. 一键准备依赖（推荐）
+
+```bash
+# Windows PowerShell
+.\scripts\dev.ps1
+
+# macOS / Linux
+chmod +x scripts/dev.sh && ./scripts/dev.sh
+```
+
+脚本会创建 venv、安装依赖、生成 `.env` / `.env.local`，并打印启动命令。
 
 ### 1. 启动后端
 
 ```bash
 cd apps/api
-python -m venv .venv
-
 # Windows
 .\.venv\Scripts\activate
-# macOS / Linux
-# source .venv/bin/activate
-
-pip install -e .
-copy .env.example .env          # Windows
-# cp .env.example .env          # macOS / Linux
+# macOS / Linux: source .venv/bin/activate
 
 uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
@@ -116,29 +123,33 @@ uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 
 ```bash
 cd apps/web
-npm install
-```
-
-创建 `apps/web/.env.local`（可参考 `.env.example`）：
-
-```env
-NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000
-NEXT_PUBLIC_USE_MOCK=false
-```
-
-```bash
 npm run dev
 ```
 
 打开 http://localhost:3000 → 登录 → 选择工作空间 → **设置** 中配置火山方舟。
 
-### 3.（可选）基础设施
+`apps/web/.env.local` 默认（脚本已生成）：
 
-```bash
-docker compose -f infra/docker-compose.yml up -d
+```env
+NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000/api/v1
+NEXT_PUBLIC_USE_MOCK=false
 ```
 
-然后将 `apps/api/.env` 里的 `DATABASE_URL` 改为 Postgres 连接串。
+无后端只想看 UI 时，把 `NEXT_PUBLIC_USE_MOCK=true`。
+
+### 3.（可选）Docker
+
+```bash
+# 仅 Postgres / Redis / MinIO
+docker compose -f infra/docker-compose.yml up -d
+
+# 全栈（api + web + 依赖）
+docker compose -f infra/docker-compose.yml --profile full up -d --build
+```
+
+使用 Postgres 时，将 `apps/api/.env` 的 `DATABASE_URL` 改为：
+
+`postgresql+asyncpg://prism:prism@localhost:5432/prism`
 
 ---
 
@@ -171,17 +182,41 @@ docker compose -f infra/docker-compose.yml up -d
 | [docs/TECHNICAL.md](docs/TECHNICAL.md) | 架构、租户模型、Agent、Media、检索、安全 |
 | [docs/STRUCTURE.md](docs/STRUCTURE.md) | Monorepo 目录与分包约定 |
 | [docs/IA.md](docs/IA.md) | 页面信息架构 |
+| [ROADMAP.md](ROADMAP.md) | 近期 / Phase 2 / Phase 3 路线图 |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | 如何贡献 |
+| [SECURITY.md](SECURITY.md) | 安全披露 |
+| [CHANGELOG.md](CHANGELOG.md) | 变更记录 |
 | [apps/web/README.md](apps/web/README.md) | 前端开发说明 |
 | [apps/api/README.md](apps/api/README.md) | 后端开发与火山配置 |
 | `design/prism-ui/index.html` | 界面视觉草稿 |
 
 ---
 
-## 开发者
+## 为什么好用（开源目标）
 
-本项目由 **jintao**（GitHub [@jintao0693](https://github.com/jintao0693)）设计与开发维护。
+| 目标 | 现状 |
+|------|------|
+| 5 分钟跑起来 | `scripts/dev.*` + 演示账号开箱即用 |
+| 无 Key 也能体验 | 默认演示模式；配火山后无缝切真模型 |
+| 贡献路径清晰 | Issue / PR 模板 + CI + CONTRIBUTING |
+| 架构可演进 | Media Gateway / 租户 Provider / Phase 预留 |
 
-欢迎 Issue / PR。建议先读产品与技术文档，再改对应 `apps/web` 或 `apps/api` 模块。
+接下来重点打磨：任务进度与错误提示、Alembic 迁移、更多测试、截图/演示 GIF。见 [ROADMAP.md](ROADMAP.md)。
+
+---
+
+## 开发者与贡献
+
+本项目由 **jintao**（GitHub [@jintao0693](https://github.com/jintao0693)）设计与开发维护。作者名单见 [AUTHORS.md](AUTHORS.md)。
+
+欢迎 Issue / PR：请先阅读 [CONTRIBUTING.md](CONTRIBUTING.md) 与 [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)。
+
+本地校验：
+
+```bash
+cd apps/api && pip install -e ".[dev]" && ruff check app && pytest -q
+cd apps/web && npm run lint && npm run build
+```
 
 ---
 

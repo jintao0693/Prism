@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // 便于 Docker 镜像体积更小
+  output: "standalone",
 };
 
 export default nextConfig;

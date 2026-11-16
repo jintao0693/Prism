@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from jose import JWTError, jwt
@@ -44,7 +44,7 @@ def create_access_token(
 ) -> str:
     """签发访问令牌。claims 含 sub / tenant_id / role。"""
     settings = get_settings()
-    expire = datetime.now(timezone.utc) + timedelta(
+    expire = datetime.now(UTC) + timedelta(
         minutes=settings.access_token_expire_minutes,
     )
     payload: dict[str, Any] = {

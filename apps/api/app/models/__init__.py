@@ -11,16 +11,16 @@ from app.models.user import User
 from app.models.workspace import Workspace
 
 __all__ = [
-    "Tenant",
-    "User",
-    "Membership",
-    "Workspace",
-    "Conversation",
-    "Message",
     "Asset",
+    "Conversation",
+    "GenerationJob",
     "KnowledgeBase",
     "KnowledgeItem",
-    "GenerationJob",
+    "Membership",
+    "Message",
     "QuotaUsage",
+    "Tenant",
     "TenantProviderConfig",
+    "User",
+    "Workspace",
 ]

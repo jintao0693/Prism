@@ -1,6 +1,6 @@
 """设置与用量、火山模型配置。"""
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends
 from sqlalchemy import select
@@ -48,7 +48,7 @@ async def usage_summary(
     db: AsyncSession = Depends(get_db),
 ) -> UsageSummaryOut:
     """本月用量。"""
-    ym = datetime.utcnow().strftime("%Y-%m")
+    ym = datetime.now(tz=UTC).strftime("%Y-%m")
     row = await db.scalar(
         select(QuotaUsage).where(
             QuotaUsage.tenant_id == ctx.tenant_id,

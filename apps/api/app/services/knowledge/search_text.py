@@ -34,7 +34,7 @@ async def search_text(
     if client and client.embedding_model:
         try:
             query_vec = await client.embed_text(query)
-        except Exception:  # noqa: BLE001
+        except Exception:
             query_vec = None
 
     scored: list[KnowledgeHitOut] = []

@@ -1,0 +1,26 @@
+name: Feature request
+description: 提议新功能或改进
+title: "[feat] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 要解决什么问题？
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 建议方案
+    validations:
+      required: true
+  - type: dropdown
+    id: phase
+    attributes:
+      label: 建议阶段
+      options:
+        - MVP / Now
+        - Phase 2
+        - Phase 3
+        - 不确定

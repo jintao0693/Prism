@@ -11,10 +11,10 @@ if TYPE_CHECKING:
     from redis.asyncio import Redis
 
 logger = logging.getLogger(__name__)
-_redis: "Redis | None" = None
+_redis: Redis | None = None
 
 
-async def get_redis() -> "Redis | None":
+async def get_redis() -> Redis | None:
     """获取全局 Redis；失败则记日志并返回 None。"""
     global _redis
     if _redis is not None:
@@ -27,7 +27,7 @@ async def get_redis() -> "Redis | None":
         await client.ping()
         _redis = client
         return _redis
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.warning("Redis 不可用，将跳过队列能力: %s", exc)
         return None
 

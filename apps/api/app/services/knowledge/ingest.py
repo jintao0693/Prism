@@ -26,7 +26,7 @@ async def ingest_text_document(
         try:
             vec = await client.embed_text(f"{title}\n{content}"[:2000])
             embedding_json = dumps_embedding(vec)
-        except Exception:  # noqa: BLE001
+        except Exception:
             embedding_json = None
 
     item = KnowledgeItem(

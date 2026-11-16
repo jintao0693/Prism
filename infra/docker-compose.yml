@@ -1,5 +1,6 @@
-# Prism 本地依赖：Postgres(pgvector) + Redis + MinIO
-# 后端默认仍可用 SQLite；需要这些服务时再 up。
+# Prism 本地 / 演示栈
+# 仅依赖：docker compose -f infra/docker-compose.yml up -d
+# 全栈：  docker compose -f infra/docker-compose.yml --profile full up -d --build
 
 services:
   postgres:
@@ -13,11 +14,21 @@ services:
     volumes:
       - prism_pg:/var/lib/postgresql/data
       - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U prism -d prism"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   redis:
     image: redis:7-alpine
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   minio:
     image: minio/minio:latest
@@ -31,6 +42,41 @@ services:
     volumes:
       - prism_minio:/data
 
+  api:
+    profiles: ["full"]
+    build:
+      context: ../apps/api
+    ports:
+      - "8000:8000"
+    environment:
+      APP_ENV: docker
+      SECRET_KEY: change-me-in-production
+      DATABASE_URL: postgresql+asyncpg://prism:prism@postgres:5432/prism
+      REDIS_URL: redis://redis:6379/0
+      AGENT_DEMO_MODE: "true"
+      CORS_ORIGINS: http://localhost:3000
+      LOCAL_STORAGE_DIR: /data/storage
+    volumes:
+      - prism_api_data:/data/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  web:
+    profiles: ["full"]
+    build:
+      context: ../apps/web
+      args:
+        NEXT_PUBLIC_API_BASE_URL: http://localhost:8000/api/v1
+        NEXT_PUBLIC_USE_MOCK: "false"
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
 volumes:
   prism_pg:
   prism_minio:
+  prism_api_data:

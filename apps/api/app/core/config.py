@@ -1,9 +1,7 @@
 """应用配置：从环境变量 / .env 加载。"""
 
 from functools import lru_cache
-from typing import List
 
-from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -48,7 +46,7 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:3000"
 
     @property
-    def cors_origin_list(self) -> List[str]:
+    def cors_origin_list(self) -> list[str]:
         """解析 CORS 白名单。"""
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
 

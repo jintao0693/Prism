@@ -1,0 +1,41 @@
+name: Bug report
+description: 报告一个缺陷
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈。请勿粘贴 API Key 或密钥。维护者：jintao。
+  - type: textarea
+    id: describe
+    attributes:
+      label: 现象
+      description: 发生了什么？期望是什么？
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: 复现步骤
+      placeholder: |
+        1. …
+        2. …
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: 环境
+      placeholder: Windows / macOS / Linux · Node · Python · 浏览器
+  - type: dropdown
+    id: area
+    attributes:
+      label: 模块
+      options:
+        - web
+        - api
+        - volcengine
+        - docs
+        - infra
+        - other
