@@ -1,0 +1,61 @@
+"""对话 Schema。"""
+
+from typing import Any, Literal
+
+from pydantic import BaseModel, Field
+
+
+class ConversationSummaryOut(BaseModel):
+    """会话列表项。"""
+
+    id: str
+    title: str
+    kind: str
+    updated_at_label: str = Field(alias="updatedAtLabel")
+    thumb_tone: str = Field(alias="thumbTone", default="a")
+
+    model_config = {"populate_by_name": True}
+
+
+class GenerationResultOut(BaseModel):
+    """生成结果卡片。"""
+
+    id: str
+    label: str
+    tone: str
+
+
+class ChatMessageOut(BaseModel):
+    """消息。"""
+
+    id: str
+    role: Literal["user", "assistant", "system", "tool"]
+    content: str
+    tool_label: str | None = Field(default=None, alias="toolLabel")
+    results: list[GenerationResultOut] | None = None
+    created_at: str = Field(alias="createdAt")
+
+    model_config = {"populate_by_name": True}
+
+
+class SendMessageRequest(BaseModel):
+    """发送消息。"""
+
+    content: str = Field(min_length=1)
+    knowledge_base_ids: list[str] = Field(default_factory=list, alias="knowledgeBaseIds")
+
+    model_config = {"populate_by_name": True}
+
+
+class ConversationCreate(BaseModel):
+    """新建会话。"""
+
+    title: str = "新对话"
+    kind: str = "chat"
+
+
+class SseEvent(BaseModel):
+    """SSE 事件载荷。"""
+
+    type: str
+    data: dict[str, Any] = Field(default_factory=dict)

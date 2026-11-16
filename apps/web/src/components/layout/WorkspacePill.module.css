@@ -1,0 +1,31 @@
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 8px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--canvas);
+  border: 1px solid var(--line);
+  color: var(--ink-soft);
+  font-size: 13px;
+  font-weight: 500;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.pill:hover {
+  border-color: #c9d1dc;
+  background: #fff;
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.caret {
+  opacity: 0.5;
+}

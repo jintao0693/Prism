@@ -1,0 +1,86 @@
+.panel {
+  padding: 22px;
+  max-width: 720px;
+}
+
+.panel section + section {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+.panel h3 {
+  margin: 0 0 8px;
+  font-size: 15px;
+}
+
+.panel > section > p,
+.hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.provider .hint {
+  margin-bottom: 14px;
+}
+
+.headRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.form {
+  display: grid;
+  gap: 12px;
+}
+
+.form label {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.form input {
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--ink);
+  background: #fff;
+  outline: none;
+}
+
+.form input:focus {
+  border-color: #9bb8b5;
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.message {
+  margin: 12px 0 0;
+  font-size: 13px;
+  color: var(--accent);
+  line-height: 1.5;
+}

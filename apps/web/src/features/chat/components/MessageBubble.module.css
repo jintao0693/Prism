@@ -1,0 +1,72 @@
+.bubble {
+  max-width: 720px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.bubble p {
+  margin: 0;
+}
+
+.user {
+  align-self: flex-end;
+  background: var(--ink);
+  color: #f5f7fa;
+  border-bottom-right-radius: 6px;
+}
+
+.agent {
+  align-self: flex-start;
+  background: var(--canvas);
+  border: 1px solid var(--line);
+  border-bottom-left-radius: 6px;
+}
+
+.tool {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid var(--line);
+  font-size: 12px;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.results {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.result {
+  aspect-ratio: 1;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  position: relative;
+  overflow: hidden;
+}
+
+.result span {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+
+@media (max-width: 720px) {
+  .results {
+    grid-template-columns: 1fr;
+  }
+}

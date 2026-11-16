@@ -1,0 +1,52 @@
+.card {
+  text-align: left;
+  padding: 22px;
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  transition: transform 0.2s, border-color 0.2s;
+  min-height: 168px;
+  display: flex;
+  flex-direction: column;
+}
+
+.card:hover {
+  transform: translateY(-3px);
+  border-color: #c5cdd8;
+}
+
+.tag {
+  align-self: flex-start;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.evergreen {
+  background: #eef1f5;
+  color: #5b6573;
+}
+
+.card h3 {
+  margin: 10px 0 6px;
+  font-size: 18px;
+  letter-spacing: -0.02em;
+}
+
+.card p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink-soft);
+  line-height: 1.5;
+}
+
+.meta {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: auto;
+  padding-top: 18px;
+}

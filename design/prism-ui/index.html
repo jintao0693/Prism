@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Prism · 界面草稿</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&family=Sora:wght@500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --ink: #12151a;
+      --ink-soft: #3d4550;
+      --muted: #7a8494;
+      --line: #e4e8ee;
+      --surface: #ffffff;
+      --canvas: #f3f5f8;
+      --canvas-deep: #e8ecf1;
+      --accent: #0f6e6a;
+      --accent-soft: #e6f4f3;
+      --accent-hover: #0b5855;
+      --warn-soft: #f4efe6;
+      --spectrum: linear-gradient(90deg, #e8a838 0%, #e07a5f 28%, #0f6e6a 62%, #3d7ea6 100%);
+      --radius: 14px;
+      --radius-sm: 10px;
+      --shadow: 0 1px 2px rgba(18, 21, 26, 0.04), 0 12px 32px rgba(18, 21, 26, 0.06);
+      --font-display: "Sora", "Noto Sans SC", system-ui, sans-serif;
+      --font-body: "Noto Sans SC", system-ui, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: var(--font-body);
+      color: var(--ink);
+      background: var(--canvas);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button, input { font: inherit; }
+    button { cursor: pointer; border: none; background: none; }
+    a { color: inherit; text-decoration: none; }
+
+    .app {
+      min-height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* —— Top chrome —— */
+    .topbar {
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      background: rgba(255,255,255,0.86);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--line);
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .mark {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: var(--ink);
+      position: relative;
+      overflow: hidden;
+    }
+    .mark::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: var(--spectrum);
+      opacity: 0.95;
+      clip-path: polygon(12% 78%, 42% 18%, 58% 18%, 88% 78%, 70% 78%, 50% 38%, 30% 78%);
+    }
+    .brand-name {
+      font-family: var(--font-display);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      font-size: 17px;
+    }
+    .workspace-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: 18px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: var(--canvas);
+      border: 1px solid var(--line);
+      color: var(--ink-soft);
+      font-size: 13px;
+      font-weight: 500;
+      transition: border-color .2s, background .2s;
+    }
+    .workspace-pill:hover { border-color: #c9d1dc; background: #fff; }
+    .workspace-pill .dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-soft);
+    }
+    .top-actions { display: flex; align-items: center; gap: 10px; }
+    .avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: linear-gradient(145deg, #1c2430, #0f6e6a);
+      color: #fff; display: grid; place-items: center;
+      font-size: 12px; font-weight: 600;
+    }
+
+    /* —— Shell —— */
+    .shell {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      min-height: calc(100vh - 56px);
+    }
+    .nav {
+      padding: 18px 12px;
+      border-right: 1px solid var(--line);
+      background: #fafbfc;
+    }
+    .nav-label {
+      padding: 0 10px 8px;
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.04em;
+    }
+    .nav-item {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      color: var(--ink-soft);
+      font-size: 14px;
+      font-weight: 500;
+      text-align: left;
+      transition: background .15s, color .15s;
+    }
+    .nav-item:hover { background: #eef1f5; color: var(--ink); }
+    .nav-item.active {
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+    .nav-item .ico {
+      width: 18px; text-align: center; opacity: 0.85;
+    }
+    .nav-item.soon {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+    .nav-item .badge {
+      margin-left: auto;
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: var(--warn-soft);
+      color: #8a6a3b;
+    }
+    .nav-foot {
+      margin-top: 24px;
+      padding: 12px;
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+      border: 1px solid var(--line);
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    .spectrum-bar {
+      height: 3px;
+      width: 100%;
+      background: var(--spectrum);
+      border-radius: 999px;
+      margin-bottom: 10px;
+    }
+
+    .main {
+      padding: 28px 32px 40px;
+      overflow: auto;
+    }
+
+    /* —— Shared —— */
+    .page { display: none; animation: rise .35s ease both; }
+    .page.active { display: block; }
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: none; }
+    }
+    .page-head {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .page-head h1 {
+      margin: 0;
+      font-family: var(--font-display);
+      font-size: 28px;
+      letter-spacing: -0.04em;
+      font-weight: 700;
+    }
+    .page-head p {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      border-radius: 11px;
+      font-weight: 600;
+      font-size: 13px;
+      transition: transform .15s, background .15s, box-shadow .15s;
+    }
+    .btn:active { transform: translateY(1px); }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 8px 20px rgba(15, 110, 106, 0.22);
+    }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-ghost {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      color: var(--ink-soft);
+    }
+    .btn-ghost:hover { background: #fff; border-color: #cfd6e0; }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    /* —— Workspace picker (full) —— */
+    .ws-screen {
+      min-height: 100vh;
+      display: none;
+      flex-direction: column;
+      background:
+        radial-gradient(900px 420px at 12% -10%, rgba(15,110,106,0.12), transparent 60%),
+        radial-gradient(700px 380px at 90% 0%, rgba(232,168,56,0.10), transparent 55%),
+        var(--canvas);
+    }
+    .ws-screen.active { display: flex; }
+    .ws-hero {
+      max-width: 980px;
+      width: 100%;
+      margin: 72px auto 0;
+      padding: 0 24px;
+    }
+    .ws-hero .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--accent);
+      font-weight: 600;
+      margin-bottom: 14px;
+    }
+    .ws-hero h1 {
+      font-family: var(--font-display);
+      font-size: clamp(36px, 5vw, 52px);
+      letter-spacing: -0.05em;
+      margin: 0;
+      line-height: 1.1;
+    }
+    .ws-hero h1 span {
+      background: var(--spectrum);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .ws-hero p {
+      margin: 14px 0 0;
+      max-width: 480px;
+      color: var(--ink-soft);
+      font-size: 16px;
+      line-height: 1.6;
+    }
+    .ws-grid {
+      max-width: 980px;
+      width: 100%;
+      margin: 40px auto 64px;
+      padding: 0 24px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+    .ws-card {
+      text-align: left;
+      padding: 22px;
+      border-radius: var(--radius);
+      background: rgba(255,255,255,0.9);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      transition: transform .2s, border-color .2s;
+      min-height: 168px;
+      display: flex;
+      flex-direction: column;
+    }
+    .ws-card:hover {
+      transform: translateY(-3px);
+      border-color: #c5cdd8;
+    }
+    .ws-card .meta {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: auto;
+      padding-top: 18px;
+    }
+    .ws-card h3 {
+      margin: 10px 0 6px;
+      font-size: 18px;
+      letter-spacing: -0.02em;
+    }
+    .ws-card p { margin: 0; font-size: 13px; color: var(--ink-soft); line-height: 1.5; }
+    .ws-card.create {
+      border-style: dashed;
+      background: transparent;
+      box-shadow: none;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      gap: 8px;
+    }
+    .ws-card .tag {
+      align-self: flex-start;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    /* —— Workbench —— */
+    .hero-strip {
+      position: relative;
+      overflow: hidden;
+      padding: 28px;
+      border-radius: var(--radius);
+      background: #161a21;
+      color: #f4f6f8;
+      margin-bottom: 20px;
+    }
+    .hero-strip::before {
+      content: "";
+      position: absolute;
+      inset: auto -10% -40% 40%;
+      height: 180%;
+      background: var(--spectrum);
+      opacity: 0.35;
+      filter: blur(40px);
+      transform: rotate(-18deg);
+    }
+    .hero-strip > * { position: relative; }
+    .hero-strip h2 {
+      margin: 0;
+      font-family: var(--font-display);
+      font-size: 26px;
+      letter-spacing: -0.04em;
+    }
+    .hero-strip p { margin: 8px 0 18px; color: #b7c0cc; font-size: 14px; }
+    .quick-row { display: flex; flex-wrap: wrap; gap: 10px; }
+    .quick {
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: #eef2f6;
+      font-size: 13px;
+      transition: background .15s;
+    }
+    .quick:hover { background: rgba(255,255,255,0.14); }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 16px;
+    }
+    .section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 18px 0;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .section-title a { color: var(--accent); font-weight: 500; font-size: 12px; }
+    .list { padding: 10px 10px 14px; }
+    .list-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      border-radius: 12px;
+      transition: background .15s;
+    }
+    .list-row:hover { background: var(--canvas); }
+    .thumb {
+      width: 44px; height: 44px; border-radius: 10px;
+      background: var(--canvas-deep);
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+    .thumb.img-a { background: linear-gradient(135deg, #d9e7e5, #f0d9c8); }
+    .thumb.img-b { background: linear-gradient(135deg, #cfd8e6, #e5d4c0); }
+    .thumb.img-c { background: linear-gradient(135deg, #e2e0d4, #c7ddd8); }
+    .list-row strong { display: block; font-size: 13px; font-weight: 600; }
+    .list-row span { font-size: 12px; color: var(--muted); }
+
+    /* —— Chat —— */
+    .chat-layout {
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      gap: 16px;
+      height: calc(100vh - 120px);
+      min-height: 560px;
+    }
+    .session-list { padding: 12px; overflow: auto; }
+    .session {
+      width: 100%;
+      text-align: left;
+      padding: 12px;
+      border-radius: 12px;
+      margin-bottom: 4px;
+    }
+    .session.active { background: var(--accent-soft); }
+    .session:hover { background: var(--canvas); }
+    .session.active:hover { background: var(--accent-soft); }
+    .session strong { display: block; font-size: 13px; margin-bottom: 4px; }
+    .session span { font-size: 11px; color: var(--muted); }
+    .chat-pane {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .messages {
+      flex: 1;
+      overflow: auto;
+      padding: 22px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+    .bubble {
+      max-width: 720px;
+      padding: 14px 16px;
+      border-radius: 16px;
+      font-size: 14px;
+      line-height: 1.65;
+    }
+    .bubble.user {
+      align-self: flex-end;
+      background: var(--ink);
+      color: #f5f7fa;
+      border-bottom-right-radius: 6px;
+    }
+    .bubble.agent {
+      align-self: flex-start;
+      background: var(--canvas);
+      border: 1px solid var(--line);
+      border-bottom-left-radius: 6px;
+    }
+    .tool-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 10px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #fff;
+      border: 1px solid var(--line);
+      font-size: 12px;
+      color: var(--accent);
+      font-weight: 600;
+    }
+    .result-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .result-card {
+      aspect-ratio: 1;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: linear-gradient(145deg, #dfe9e7, #f3e6d8 55%, #e8eef5);
+      position: relative;
+      overflow: hidden;
+    }
+    .result-card:nth-child(2) {
+      background: linear-gradient(160deg, #e7e3d8, #c9d9d6 60%, #d5dde8);
+    }
+    .result-card:nth-child(3) {
+      background: linear-gradient(200deg, #eadfd2, #d3e4e1, #c8d4e4);
+    }
+    .result-card span {
+      position: absolute;
+      left: 10px; bottom: 10px;
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.88);
+      color: var(--ink-soft);
+      font-weight: 600;
+    }
+    .composer {
+      border-top: 1px solid var(--line);
+      padding: 14px 16px 16px;
+      background: #fff;
+    }
+    .composer-box {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 12px;
+      background: var(--canvas);
+    }
+    .composer-box textarea {
+      border: none;
+      outline: none;
+      resize: none;
+      background: transparent;
+      min-height: 56px;
+      font-size: 14px;
+      color: var(--ink);
+    }
+    .composer-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+    .chip {
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #fff;
+      border: 1px solid var(--line);
+      font-size: 12px;
+      color: var(--ink-soft);
+    }
+
+    /* —— Knowledge —— */
+    .kb-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+    }
+    .kb-card {
+      padding: 20px;
+      text-align: left;
+      transition: transform .2s;
+    }
+    .kb-card:hover { transform: translateY(-2px); }
+    .kb-card h3 { margin: 12px 0 6px; font-size: 16px; }
+    .kb-card p { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.5; }
+    .kb-stat {
+      margin-top: 18px;
+      display: flex;
+      gap: 14px;
+      font-size: 12px;
+      color: var(--ink-soft);
+    }
+
+    .kb-detail {
+      display: grid;
+      grid-template-columns: 1fr 1.1fr;
+      gap: 16px;
+    }
+    .tabs {
+      display: flex;
+      gap: 6px;
+      padding: 6px;
+      background: var(--canvas);
+      border-radius: 12px;
+      margin-bottom: 14px;
+    }
+    .tab {
+      flex: 1;
+      padding: 8px 10px;
+      border-radius: 9px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--muted);
+    }
+    .tab.active { background: #fff; color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.04); }
+    .tab:disabled { opacity: 0.4; cursor: not-allowed; }
+    .search-box {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .search-box input {
+      flex: 1;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      padding: 11px 12px;
+      outline: none;
+      background: #fff;
+    }
+    .search-box input:focus { border-color: #9bb8b5; box-shadow: 0 0 0 3px var(--accent-soft); }
+    .dropzone {
+      border: 1.5px dashed #c5ced9;
+      border-radius: 14px;
+      padding: 28px 16px;
+      text-align: center;
+      color: var(--muted);
+      background: #fafbfc;
+      margin-bottom: 14px;
+    }
+    .dropzone strong { color: var(--accent); }
+    .hit {
+      display: grid;
+      grid-template-columns: 72px 1fr;
+      gap: 12px;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      margin-bottom: 10px;
+      background: #fff;
+    }
+    .hit .preview {
+      border-radius: 10px;
+      background: linear-gradient(135deg, #d7e4e1, #efe0d0);
+    }
+    .hit h4 { margin: 0 0 4px; font-size: 13px; }
+    .hit p { margin: 0; font-size: 12px; color: var(--muted); line-height: 1.5; }
+    .score {
+      display: inline-block;
+      margin-top: 8px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--accent);
+      background: var(--accent-soft);
+      padding: 3px 8px;
+      border-radius: 999px;
+    }
+
+    /* —— Assets —— */
+    .filters { display: flex; gap: 8px; margin-bottom: 16px; }
+    .filter {
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: #fff;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--ink-soft);
+    }
+    .filter.active {
+      background: var(--ink);
+      color: #fff;
+      border-color: var(--ink);
+    }
+    .asset-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+    .asset {
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      background: #fff;
+    }
+    .asset .media {
+      aspect-ratio: 1;
+      background: linear-gradient(145deg, #dfe8e5, #f0e2d4);
+    }
+    .asset:nth-child(2) .media { background: linear-gradient(160deg, #e5e0d6, #c9d7e3); }
+    .asset:nth-child(3) .media { background: linear-gradient(200deg, #d8e4df, #e8d5c7); }
+    .asset:nth-child(4) .media { background: linear-gradient(120deg, #e2e6ec, #d6e3df); }
+    .asset:nth-child(5) .media { background: linear-gradient(180deg, #efe6db, #cfdde8); }
+    .asset:nth-child(6) .media { background: linear-gradient(210deg, #d5e0dc, #e7d9cc); }
+    .asset .cap {
+      padding: 10px 12px 12px;
+      font-size: 12px;
+    }
+    .asset .cap strong { display: block; margin-bottom: 2px; font-size: 13px; }
+    .asset .cap span { color: var(--muted); }
+
+    .draft-note {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      z-index: 40;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(18,21,26,0.88);
+      color: #fff;
+      font-size: 12px;
+      backdrop-filter: blur(8px);
+      box-shadow: var(--shadow);
+    }
+
+    @media (max-width: 1100px) {
+      .ws-grid, .kb-grid, .asset-grid { grid-template-columns: repeat(2, 1fr); }
+      .grid-2, .kb-detail, .chat-layout { grid-template-columns: 1fr; }
+      .shell { grid-template-columns: 72px 1fr; }
+      .nav-item span.label, .nav-label, .nav-foot { display: none; }
+      .nav-item { justify-content: center; }
+    }
+    @media (max-width: 720px) {
+      .ws-grid, .kb-grid, .asset-grid, .result-grid { grid-template-columns: 1fr; }
+      .main { padding: 18px 16px 32px; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Workspace picker -->
+  <section id="screen-workspaces" class="ws-screen active">
+    <div class="topbar" style="background:transparent;border:none;position:static">
+      <div class="brand">
+        <div class="mark" aria-hidden="true"></div>
+        <div class="brand-name">Prism</div>
+      </div>
+      <div class="top-actions">
+        <span style="font-size:13px;color:var(--muted)">品牌星云 · 演示租户</span>
+        <div class="avatar">林</div>
+      </div>
+    </div>
+    <div class="ws-hero">
+      <div class="eyebrow"><span class="spectrum-bar" style="width:36px;display:inline-block;margin:0"></span> 选择工作空间</div>
+      <h1>把灵感折进 <span>Prism</span></h1>
+      <p>对话驱动生图与生视频，知识库支持以图搜图。每个工作空间独立沉淀素材与品牌语境。</p>
+    </div>
+    <div class="ws-grid">
+      <button class="ws-card" onclick="enterApp('春季大促 2026')">
+        <span class="tag">进行中</span>
+        <h3>春季大促 2026</h3>
+        <p>主视觉、种草短视频与知识库素材集中在此空间。</p>
+        <div class="meta">12 个对话 · 86 个资产 · 2 小时前</div>
+      </button>
+      <button class="ws-card" onclick="enterApp('品牌常青')">
+        <span class="tag" style="background:#eef1f5;color:#5b6573">常青</span>
+        <h3>品牌常青</h3>
+        <p>VI 规范、历史主视觉与可复用分镜库。</p>
+        <div class="meta">5 个对话 · 214 个资产 · 昨天</div>
+      </button>
+      <button class="ws-card create">
+        <div style="font-size:28px;line-height:1">＋</div>
+        <div>新建工作空间</div>
+      </button>
+    </div>
+  </section>
+
+  <!-- App shell -->
+  <div id="screen-app" class="app" style="display:none">
+    <header class="topbar">
+      <div class="brand">
+        <div class="mark" aria-hidden="true"></div>
+        <div class="brand-name">Prism</div>
+        <button class="workspace-pill" onclick="showWorkspaces()" title="切换工作空间">
+          <span class="dot"></span>
+          <span id="ws-name">春季大促 2026</span>
+          <span style="opacity:.5">▾</span>
+        </button>
+      </div>
+      <div class="top-actions">
+        <button class="btn btn-ghost" onclick="go('chat')">＋ 新对话</button>
+        <div class="avatar">林</div>
+      </div>
+    </header>
+
+    <div class="shell">
+      <aside class="nav">
+        <div class="nav-label">空间</div>
+        <button class="nav-item active" data-page="home" onclick="go('home')"><span class="ico">◈</span><span class="label">工作台</span></button>
+        <button class="nav-item" data-page="chat" onclick="go('chat')"><span class="ico">✎</span><span class="label">创作对话</span></button>
+        <button class="nav-item" data-page="kb" onclick="go('kb')"><span class="ico">▣</span><span class="label">知识库</span></button>
+        <button class="nav-item" data-page="assets" onclick="go('assets')"><span class="ico">▦</span><span class="label">资产中心</span></button>
+        <div class="nav-label" style="margin-top:18px">后续</div>
+        <button class="nav-item soon" disabled><span class="ico">↗</span><span class="label">发布</span><span class="badge">Phase 2</span></button>
+        <button class="nav-item soon" disabled><span class="ico">◎</span><span class="label">投放</span><span class="badge">Phase 3</span></button>
+        <button class="nav-item" data-page="settings" onclick="go('settings')"><span class="ico">⚙</span><span class="label">设置</span></button>
+        <div class="nav-foot">
+          <div class="spectrum-bar"></div>
+          本月已生成 128 张图 · 14 条视频
+        </div>
+      </aside>
+
+      <main class="main">
+        <!-- Home -->
+        <section id="page-home" class="page active">
+          <div class="hero-strip">
+            <h2>今天创作什么？</h2>
+            <p>用自然语言描述画面或镜头，Prism 会调度生图 / 生视频，并可引用当前空间知识库。</p>
+            <div class="quick-row">
+              <button class="quick" onclick="go('chat')">生成小红书封面</button>
+              <button class="quick" onclick="go('chat')">图生 15 秒种草视频</button>
+              <button class="quick" onclick="go('kb-detail')">以图搜历史素材</button>
+            </div>
+          </div>
+          <div class="grid-2">
+            <div class="panel">
+              <div class="section-title">最近对话 <a href="#" onclick="go('chat');return false">查看全部</a></div>
+              <div class="list">
+                <div class="list-row" onclick="go('chat')">
+                  <div class="thumb img-a"></div>
+                  <div><strong>春季主视觉 · 青橙光谱</strong><span>生图 · 今天 14:20</span></div>
+                </div>
+                <div class="list-row" onclick="go('chat')">
+                  <div class="thumb img-b"></div>
+                  <div><strong>种草短视频分镜</strong><span>生视频 · 昨天</span></div>
+                </div>
+                <div class="list-row" onclick="go('chat')">
+                  <div class="thumb img-c"></div>
+                  <div><strong>包装静物三视图</strong><span>生图 · 周一</span></div>
+                </div>
+              </div>
+            </div>
+            <div class="panel">
+              <div class="section-title">最近资产 <a href="#" onclick="go('assets');return false">资产中心</a></div>
+              <div class="list">
+                <div class="list-row"><div class="thumb img-b"></div><div><strong>hero_01.png</strong><span>1024² · 已入库</span></div></div>
+                <div class="list-row"><div class="thumb img-c"></div><div><strong>clip_teaser.mp4</strong><span>15s · 9:16</span></div></div>
+                <div class="list-row"><div class="thumb img-a"></div><div><strong>ref_packshot.jpg</strong><span>参考图 · 图搜可用</span></div></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Chat -->
+        <section id="page-chat" class="page">
+          <div class="page-head">
+            <div>
+              <h1>创作对话</h1>
+              <p>多轮迭代 · 自动归档到资产中心</p>
+            </div>
+            <button class="btn btn-primary">引用知识库</button>
+          </div>
+          <div class="chat-layout">
+            <div class="panel session-list">
+              <button class="session active"><strong>春季主视觉 · 青橙光谱</strong><span>今天</span></button>
+              <button class="session"><strong>种草短视频分镜</strong><span>昨天</span></button>
+              <button class="session"><strong>包装静物三视图</strong><span>周一</span></button>
+            </div>
+            <div class="panel chat-pane">
+              <div class="messages">
+                <div class="bubble user">用品牌青石色和暖橙高光，做 3 张春季大促主视觉，横版，干净留白，适合电商首页。</div>
+                <div class="bubble agent">
+                  已结合「品牌常青」知识库中的主色规范，生成 3 个变体。可点选后继续改构图或出短视频。
+                  <div class="tool-chip">✦ text_to_image · 完成</div>
+                  <div class="result-grid">
+                    <div class="result-card"><span>变体 A</span></div>
+                    <div class="result-card"><span>变体 B</span></div>
+                    <div class="result-card"><span>变体 C</span></div>
+                  </div>
+                </div>
+              </div>
+              <div class="composer">
+                <div class="composer-box">
+                  <textarea placeholder="描述画面、镜头或修改意见…"></textarea>
+                  <div class="composer-bar">
+                    <div class="chips">
+                      <span class="chip">文生图</span>
+                      <span class="chip">图生视频</span>
+                      <span class="chip">附件</span>
+                    </div>
+                    <button class="btn btn-primary">发送</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Knowledge list -->
+        <section id="page-kb" class="page">
+          <div class="page-head">
+            <div>
+              <h1>知识库</h1>
+              <p>文档问答与以图搜图 · 视频片段检索即将推出</p>
+            </div>
+            <button class="btn btn-primary">新建知识库</button>
+          </div>
+          <div class="kb-grid">
+            <button class="panel kb-card" onclick="go('kb-detail')">
+              <div class="spectrum-bar" style="width:48px"></div>
+              <h3>品牌视觉规范</h3>
+              <p>VI、主色、禁用示例与历史主视觉。</p>
+              <div class="kb-stat"><span>42 文档</span><span>128 图片</span></div>
+            </button>
+            <button class="panel kb-card" onclick="go('kb-detail')">
+              <div class="spectrum-bar" style="width:48px"></div>
+              <h3>投放历史素材</h3>
+              <p>过往投放图与成片封面，支持图搜复用。</p>
+              <div class="kb-stat"><span>6 文档</span><span>360 图片</span></div>
+            </button>
+            <button class="panel kb-card" style="border-style:dashed;box-shadow:none;background:transparent;color:var(--muted)">
+              <div style="font-size:24px">＋</div>
+              <h3 style="color:var(--muted)">新建知识库</h3>
+              <p>为当前工作空间沉淀可检索素材。</p>
+            </button>
+          </div>
+        </section>
+
+        <!-- Knowledge detail -->
+        <section id="page-kb-detail" class="page">
+          <div class="page-head">
+            <div>
+              <h1>品牌视觉规范</h1>
+              <p>文本检索 · 以图搜图</p>
+            </div>
+            <button class="btn btn-ghost" onclick="go('kb')">返回列表</button>
+          </div>
+          <div class="kb-detail">
+            <div class="panel" style="padding:16px">
+              <div class="tabs">
+                <button class="tab active">以图搜图</button>
+                <button class="tab">文本检索</button>
+                <button class="tab" disabled>片段检索</button>
+              </div>
+              <div class="dropzone">拖入参考图，或 <strong>点击上传</strong><br /><span style="font-size:12px">JPG / PNG · 用于相似素材召回</span></div>
+              <div class="search-box">
+                <input value="春季 · 青石主色 · 横版" />
+                <button class="btn btn-primary">搜索</button>
+              </div>
+              <p style="margin:0;font-size:12px;color:var(--muted)">片段检索（Phase 2）将支持按镜头定位视频时间段。</p>
+            </div>
+            <div>
+              <div class="hit"><div class="preview"></div><div><h4>spring_hero_v3.png</h4><p>与查询图构图接近，主色匹配度高。</p><span class="score">相似 0.91</span></div></div>
+              <div class="hit"><div class="preview" style="background:linear-gradient(145deg,#e8ddd0,#cfdbe8)"></div><div><h4>kv_storefront.jpg</h4><p>留白比例接近，可作变体参考。</p><span class="score">相似 0.84</span></div></div>
+              <div class="hit"><div class="preview" style="background:linear-gradient(145deg,#d5e3df,#eee4d8)"></div><div><h4>pack_still_02.png</h4><p>材质光感相近，主体不同。</p><span class="score">相似 0.76</span></div></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Assets -->
+        <section id="page-assets" class="page">
+          <div class="page-head">
+            <div>
+              <h1>资产中心</h1>
+              <p>当前工作空间内的生成与上传素材</p>
+            </div>
+            <button class="btn btn-ghost">上传</button>
+          </div>
+          <div class="filters">
+            <button class="filter active">全部</button>
+            <button class="filter">图片</button>
+            <button class="filter">视频</button>
+          </div>
+          <div class="asset-grid">
+            <div class="asset"><div class="media"></div><div class="cap"><strong>hero_01.png</strong><span>对话生成 · 今天</span></div></div>
+            <div class="asset"><div class="media"></div><div class="cap"><strong>hero_02.png</strong><span>对话生成 · 今天</span></div></div>
+            <div class="asset"><div class="media"></div><div class="cap"><strong>teaser.mp4</strong><span>15s · 图生视频</span></div></div>
+            <div class="asset"><div class="media"></div><div class="cap"><strong>ref_pack.jpg</strong><span>上传 · 图搜源</span></div></div>
+            <div class="asset"><div class="media"></div><div class="cap"><strong>story_03.png</strong><span>对话生成 · 昨天</span></div></div>
+            <div class="asset"><div class="media"></div><div class="cap"><strong>still_set.png</strong><span>对话生成 · 周一</span></div></div>
+          </div>
+        </section>
+
+        <!-- Settings -->
+        <section id="page-settings" class="page">
+          <div class="page-head">
+            <div>
+              <h1>设置</h1>
+              <p>工作空间、成员与模型配置（骨架）</p>
+            </div>
+          </div>
+          <div class="panel" style="padding:22px;max-width:640px">
+            <h3 style="margin:0 0 8px;font-size:15px">工作空间</h3>
+            <p style="margin:0 0 18px;color:var(--muted);font-size:13px;line-height:1.6">重命名、归档空间；管理空间成员（可与租户角色叠加）。</p>
+            <h3 style="margin:0 0 8px;font-size:15px">模型与密钥</h3>
+            <p style="margin:0 0 18px;color:var(--muted);font-size:13px;line-height:1.6">租户级配置生图 / 生视频供应商；密钥加密存储，界面仅脱敏展示。</p>
+            <h3 style="margin:0 0 8px;font-size:15px">用量</h3>
+            <p style="margin:0;color:var(--muted);font-size:13px;line-height:1.6">本月配额与剩余次数（计费后置，表结构先具备）。</p>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <div class="draft-note">界面草稿 · 非最终视觉 · 打开 design/prism-ui/index.html</div>
+
+  <script>
+    function showWorkspaces() {
+      document.getElementById('screen-app').style.display = 'none';
+      document.getElementById('screen-workspaces').classList.add('active');
+    }
+    function enterApp(name) {
+      document.getElementById('ws-name').textContent = name;
+      document.getElementById('screen-workspaces').classList.remove('active');
+      document.getElementById('screen-app').style.display = 'flex';
+      go('home');
+    }
+    function go(id) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.nav-item[data-page]').forEach(n => n.classList.remove('active'));
+      const page = document.getElementById('page-' + id);
+      if (page) page.classList.add('active');
+      const navId = (id === 'kb-detail') ? 'kb' : id;
+      const nav = document.querySelector('.nav-item[data-page="' + navId + '"]');
+      if (nav) nav.classList.add('active');
+    }
+  </script>
+</body>
+</html>
