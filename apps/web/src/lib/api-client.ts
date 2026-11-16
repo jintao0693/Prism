@@ -77,6 +77,16 @@ export function getApiBaseUrl(): string {
   return resolveApiBase();
 }
 
+/**
+ * 媒体静态资源必须用浏览器可达的 origin。
+ * 不要用服务端 Docker 内网 `API_BASE_URL`（如 http://api:8000），否则 RSC 会把坏链接写进 HTML。
+ */
+export function resolveMediaOrigin(): string {
+  const pub =
+    process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000/api/v1";
+  return pub.replace(/\/api\/v1\/?$/, "");
+}
+
 /** 将后端 `/media/...` 相对路径拼成浏览器可访问的绝对 URL。 */
 export function resolveMediaUrl(path?: string | null): string | undefined {
   if (!path) return undefined;
@@ -86,9 +96,18 @@ export function resolveMediaUrl(path?: string | null): string | undefined {
     path.startsWith("data:") ||
     path.startsWith("blob:")
   ) {
+    // 若误写成 Docker 内网主机，纠正为公开 origin
+    try {
+      const u = new URL(path);
+      if (u.hostname === "api" || u.hostname.endsWith(".internal")) {
+        return `${resolveMediaOrigin()}${u.pathname}${u.search}`;
+      }
+    } catch {
+      // keep
+    }
     return path;
   }
-  const origin = resolveApiBase().replace(/\/api\/v1\/?$/, "");
+  const origin = resolveMediaOrigin();
   return `${origin}${path.startsWith("/") ? path : `/${path}`}`;
 }
 

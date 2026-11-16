@@ -25,6 +25,9 @@ class GenerationResultOut(BaseModel):
     tone: str
     kind: str | None = None
     url: str | None = None
+    thumb_url: str | None = Field(default=None, alias="thumbUrl")
+    mime_type: str | None = Field(default=None, alias="mimeType")
+    preview_kind: str | None = Field(default=None, alias="previewKind")
     parent_asset_id: str | None = Field(default=None, alias="parentAssetId")
 
     model_config = {"populate_by_name": True}
@@ -48,6 +51,12 @@ class SendMessageRequest(BaseModel):
 
     content: str = Field(min_length=1)
     knowledge_base_ids: list[str] = Field(default_factory=list, alias="knowledgeBaseIds")
+    # 本轮显式参考图（资产中心 / 对话上传），优先于「上一张生成图」
+    reference_asset_ids: list[str] = Field(
+        default_factory=list,
+        alias="referenceAssetIds",
+        max_length=4,
+    )
 
     model_config = {"populate_by_name": True}
 

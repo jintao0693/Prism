@@ -115,6 +115,10 @@ async def search_image(
 
 
 def _hit(item: KnowledgeItem, score: float, storage) -> KnowledgeHitOut:
+    url = storage.public_url(item.storage_key) if item.storage_key else None
+    thumb = None
+    if item.item_type == "image" and item.storage_key:
+        thumb = storage.public_thumb_url(item.storage_key, mime_type="image/png")
     return KnowledgeHitOut(
         id=item.id,
         title=item.title,
@@ -122,5 +126,6 @@ def _hit(item: KnowledgeItem, score: float, storage) -> KnowledgeHitOut:
         score=round(float(score), 4),
         tone=item.tone,
         itemType=item.item_type,
-        url=storage.public_url(item.storage_key) if item.storage_key else None,
+        url=url,
+        thumbUrl=thumb or url,
     )

@@ -152,17 +152,24 @@ async def list_knowledge_items(
         )
     ).all()
     storage = get_storage()
-    return [
-        KnowledgeItemOut(
-            id=item.id,
-            title=item.title,
-            itemType=item.item_type,
-            summary=(item.content or "")[:120],
-            url=storage.public_url(item.storage_key) if item.storage_key else None,
-            hasEmbedding=bool(item.embedding_json),
+    out: list[KnowledgeItemOut] = []
+    for item in rows:
+        url = storage.public_url(item.storage_key) if item.storage_key else None
+        thumb = None
+        if item.item_type == "image" and item.storage_key:
+            thumb = storage.public_thumb_url(item.storage_key, mime_type="image/png")
+        out.append(
+            KnowledgeItemOut(
+                id=item.id,
+                title=item.title,
+                itemType=item.item_type,
+                summary=(item.content or "")[:120],
+                url=url,
+                thumbUrl=thumb or url,
+                hasEmbedding=bool(item.embedding_json),
+            ),
         )
-        for item in rows
-    ]
+    return out
 
 
 @router.post("/{kb_id}/search", response_model=list[KnowledgeHitOut])
@@ -254,12 +261,19 @@ async def reembed_knowledge_item(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     await db.commit()
     storage = get_storage()
+    url = storage.public_url(item.storage_key) if item.storage_key else None
+    thumb = (
+        storage.public_thumb_url(item.storage_key, mime_type="image/png")
+        if item.item_type == "image" and item.storage_key
+        else None
+    )
     return KnowledgeItemOut(
         id=item.id,
         title=item.title,
         itemType=item.item_type,
         summary=(item.content or "")[:120],
-        url=storage.public_url(item.storage_key) if item.storage_key else None,
+        url=url,
+        thumbUrl=thumb or url,
         hasEmbedding=bool(item.embedding_json),
     )
 
@@ -351,12 +365,19 @@ async def upload_image(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     await db.commit()
     storage = get_storage()
+    url = storage.public_url(item.storage_key) if item.storage_key else None
+    thumb = (
+        storage.public_thumb_url(item.storage_key, mime_type=content_type or "image/png")
+        if item.storage_key
+        else None
+    )
     return KnowledgeItemOut(
         id=item.id,
         title=item.title,
         itemType=item.item_type,
         summary=(item.content or "")[:120],
-        url=storage.public_url(item.storage_key) if item.storage_key else None,
+        url=url,
+        thumbUrl=thumb or url,
         hasEmbedding=bool(item.embedding_json),
     )
 

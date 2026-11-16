@@ -41,6 +41,9 @@ export interface GenerationResult {
   tone: "a" | "b" | "c" | "d" | "e" | "f";
   kind?: "image" | "video";
   url?: string;
+  thumbUrl?: string;
+  mimeType?: string;
+  previewKind?: "image" | "video" | "poster";
   parentAssetId?: string;
 }
 
@@ -51,6 +54,8 @@ export interface ChatMessage {
   toolLabel?: string;
   results?: GenerationResult[];
   createdAt: string;
+  /** 前端流式气泡占位 */
+  streaming?: boolean;
 }
 
 export interface KnowledgeBase {
@@ -69,6 +74,7 @@ export interface KnowledgeHit {
   tone: "a" | "b" | "c" | "d" | "e" | "f";
   itemType?: "document" | "image";
   url?: string;
+  thumbUrl?: string;
 }
 
 export interface KnowledgeItem {
@@ -77,6 +83,7 @@ export interface KnowledgeItem {
   itemType: "document" | "image";
   summary: string;
   url?: string;
+  thumbUrl?: string;
   hasEmbedding: boolean;
 }
 
@@ -89,6 +96,9 @@ export interface AssetItem {
   meta: string;
   tone: "a" | "b" | "c" | "d" | "e" | "f";
   url?: string;
+  thumbUrl?: string;
+  mimeType?: string;
+  previewKind?: "image" | "video" | "poster";
 }
 
 export interface UsageSummary {

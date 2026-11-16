@@ -25,6 +25,7 @@ class KnowledgeHitOut(BaseModel):
     tone: str
     item_type: str = Field(default="image", alias="itemType")
     url: str | None = None
+    thumb_url: str | None = Field(default=None, alias="thumbUrl")
 
     model_config = {"populate_by_name": True}
 
@@ -37,6 +38,7 @@ class KnowledgeItemOut(BaseModel):
     item_type: str = Field(alias="itemType")
     summary: str = ""
     url: str | None = None
+    thumb_url: str | None = Field(default=None, alias="thumbUrl")
     has_embedding: bool = Field(alias="hasEmbedding", default=False)
 
     model_config = {"populate_by_name": True}

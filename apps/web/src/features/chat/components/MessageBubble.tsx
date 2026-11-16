@@ -1,4 +1,5 @@
 import { cn } from "@/lib/cn";
+import MediaPreview from "@/components/media/MediaPreview";
 import type { ChatMessage } from "@/types/domain";
 import styles from "./MessageBubble.module.css";
 
@@ -8,28 +9,46 @@ export interface MessageBubbleProps {
 
 export default function MessageBubble({ message }: MessageBubbleProps) {
   const isUser = message.role === "user";
+  const hasText = Boolean(message.content?.trim());
+  const hasResults = Boolean(message.results?.length);
 
   return (
-    <div className={cn(styles.bubble, isUser ? styles.user : styles.agent)}>
-      <p>{message.content}</p>
+    <div
+      className={cn(
+        styles.bubble,
+        isUser ? styles.user : styles.agent,
+        message.streaming && styles.streaming,
+      )}
+    >
+      {hasText ? (
+        <p>
+          {message.content}
+          {message.streaming ? <span className={styles.caret} aria-hidden /> : null}
+        </p>
+      ) : message.streaming ? (
+        <p className={styles.pending}>
+          正在生成…
+          <span className={styles.caret} aria-hidden />
+        </p>
+      ) : null}
       {message.toolLabel ? (
         <span className={styles.tool}>✦ {message.toolLabel}</span>
       ) : null}
-      {message.results && message.results.length > 0 ? (
+      {hasResults ? (
         <div className={styles.results}>
-          {message.results.map((r) => (
-            <div key={r.id} className={cn(styles.result, !r.url && `thumb-${r.tone}`)}>
-              {r.url && r.kind !== "video" ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={r.url} alt={r.label} className={styles.resultImg} />
-              ) : null}
-              {r.url && r.kind === "video" ? (
-                <video
+          {message.results!.map((r) => (
+            <div key={r.id} className={cn(styles.result, !r.url && !r.thumbUrl && `thumb-${r.tone}`)}>
+              {r.url || r.thumbUrl ? (
+                <MediaPreview
+                  url={r.url}
+                  thumbUrl={r.thumbUrl}
+                  kind={r.kind}
+                  previewKind={r.previewKind}
+                  mimeType={r.mimeType}
+                  alt={r.label}
                   className={styles.resultImg}
-                  src={r.url}
-                  muted
-                  playsInline
-                  preload="metadata"
+                  preferThumb={r.kind !== "video"}
+                  controls={r.kind === "video" && r.previewKind !== "poster"}
                 />
               ) : null}
               <span>{r.label}</span>

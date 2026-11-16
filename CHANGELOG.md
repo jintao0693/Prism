@@ -10,7 +10,11 @@
 - 对话多轮上下文：滑动窗 + 摘要检查点；usage 触发自动压缩；手动 `POST .../compact`
 - 多模态知识库：图片入库/检索/以图搜图、补齐向量、批量上传；Postgres pgvector / SQLite JSON 双路径
 - SSE 真流式 + 视频 `media.progress`；图生视频失败时回传可读错误事件
-- 游戏向联调：`scripts/run_game_cases.py` + `docs/GAME_CASES.md`（KB / T2I→I2I / I2V 三案例）
+- 游戏向产品案例：`scripts/run_game_cases.py` + `docs/GAME_CASES.md`；根 README 改为产品叙事并内嵌发行周三案例
+- 对话附参考图：`POST /assets/upload` + `referenceAssetIds` → 图生图 / 图生视频
+- 创作对话前端真流式气泡（SSE 增量文本 / 工具进度 / 中途结果卡）
+- 对话与资产中心错误态、空状态引导；资产中心支持上传图片
+- 素材预览修复：入库旁路 JPEG 缩略图、`thumbUrl` / `previewKind`；视频海报不再误用 `<video>`；媒体 URL 始终用浏览器可达 origin
 - `docs/PROGRESS.md` 开发进度单一事实来源
 - 开源协作文档：CONTRIBUTING、CODE_OF_CONDUCT、SECURITY、ROADMAP
 - GitHub Actions CI（API ruff/pytest、Web lint/build）

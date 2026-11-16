@@ -15,6 +15,19 @@ def test_refine_uses_i2i() -> None:
     )
 
 
+def test_reference_forces_i2i() -> None:
+    assert (
+        _select_tool(
+            intent="image",
+            user_text="按这张参考图做一张商店页头图",
+            has_knowledge=False,
+            has_last_image=False,
+            has_reference_image=True,
+        )
+        == "image_to_image"
+    )
+
+
 def test_video_from_image() -> None:
     assert (
         _select_tool(
@@ -22,6 +35,19 @@ def test_video_from_image() -> None:
             user_text="把上一张做成短视频",
             has_knowledge=False,
             has_last_image=True,
+        )
+        == "image_to_video"
+    )
+
+
+def test_reference_video() -> None:
+    assert (
+        _select_tool(
+            intent="video",
+            user_text="做成 5 秒预告",
+            has_knowledge=False,
+            has_last_image=False,
+            has_reference_image=True,
         )
         == "image_to_video"
     )

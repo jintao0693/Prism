@@ -86,6 +86,30 @@ async def resolve_last_image_asset(
     return None
 
 
+async def resolve_reference_image(
+    session: AsyncSession,
+    *,
+    asset_ids: list[str],
+    tenant_id: str,
+    workspace_id: str,
+) -> Asset | None:
+    """按本轮显式 referenceAssetIds 取第一张可用图片。"""
+    for asset_id in asset_ids:
+        if not asset_id:
+            continue
+        asset = await session.get(Asset, asset_id)
+        if (
+            asset
+            and asset.tenant_id == tenant_id
+            and asset.workspace_id == workspace_id
+            and not asset.is_deleted
+            and asset.kind == "image"
+            and asset.storage_key
+        ):
+            return asset
+    return None
+
+
 def read_asset_bytes(asset: Asset) -> bytes | None:
     if not asset.storage_key:
         return None
@@ -117,7 +141,7 @@ def format_media_context(assets: list[Asset]) -> str:
             + (f" · url={url}" if url else ""),
         )
     lines.append(
-        "若用户说「上一张/这张/再改一点」，优先对最近一张 image 做 image_to_image；"
+        "若用户附带了参考图，或说「上一张/这张/再改一点」，优先对参考/最近一张 image 做 image_to_image；"
         "若说「做成视频」，优先 image_to_video。",
     )
     return "\n".join(lines)

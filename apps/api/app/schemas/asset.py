@@ -2,7 +2,7 @@
 
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class AssetOut(BaseModel):
@@ -14,8 +14,15 @@ class AssetOut(BaseModel):
     meta: str
     tone: str = "a"
     url: str | None = None
+    thumb_url: str | None = Field(default=None, alias="thumbUrl")
+    mime_type: str | None = Field(default=None, alias="mimeType")
+    # 预览策略：image | video | poster（视频但文件是海报图）
+    preview_kind: Literal["image", "video", "poster"] = Field(
+        default="image",
+        alias="previewKind",
+    )
 
-    model_config = {"from_attributes": True}
+    model_config = {"populate_by_name": True, "from_attributes": True}
 
 
 class AssetListQuery(BaseModel):

@@ -86,12 +86,14 @@
 
 ### 多模态 Agent 下一步优化
 
-1. 方舟原生 function call 多步规划（替换意图+规则选工具）  
-2. 对话内上传参考图 → 直接 i2i / i2v  
-3. Chat `stream=true` 真 token 增量  
-4. Seedream/Seedance 提示词编译器（品牌色/比例/时长/负面词）  
-5. 视频异步 Job + Worker（HTTP 只订阅进度）  
-6. 资产中心选图送回会话作参考  
+1. ~~对话内上传参考图 → i2i / i2v~~（Composer 附参考图 + `referenceAssetIds` + `/assets/upload`）  
+2. ~~前端真流式气泡~~（SSE 增量渲染助手气泡 / 进度 / 中途结果卡）  
+3. ~~错误与空状态~~（对话 / 资产中心可读错误与空引导）  
+4. 方舟原生 function call 多步规划（替换意图+规则选工具）  
+5. Chat Ark `stream=true` 真 token 增量（前端已可吃 delta）  
+6. Seedream/Seedance 提示词编译器（品牌色/比例/时长/负面词）  
+7. 视频异步 Job + Worker（HTTP 只订阅进度）  
+8. 资产中心选历史图「送回对话」作参考  
 
 ### Next（Phase 2 前）
 
@@ -151,6 +153,7 @@ python ../../scripts/run_game_cases.py
 | 图片向量化失败 | 方舟要求边长 ≥ 14px；可入库后点「重新向量化 / 补齐向量」 |
 | pgvector | Compose 用 `pgvector/pgvector:pg16`；本地默认 SQLite 仍走 `embedding_json` 全表扫 |
 | 图生视频 400 `ratio` | 首帧/首尾帧任务不要传 `ratio`（已跟首帧图走）；见 `create_video_task` |
+| 素材预览卡 / 超时 | Seedream 原图可达 6–7MB；列表必须用 `thumbUrl`（旁路 `.thumb.jpg`），勿直接塞原图；视频种子海报用 `previewKind=poster` 走 `<img>` |
 
 ---
 

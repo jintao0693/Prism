@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import PageHeader from "@/components/ui/PageHeader";
 import Button from "@/components/ui/Button";
-import { listAssets } from "@/features/assets";
+import MediaPreview from "@/components/media/MediaPreview";
+import { listAssets, uploadAsset } from "@/features/assets";
 import { cn } from "@/lib/cn";
 import type { AssetItem, AssetKind } from "@/types/domain";
 import styles from "./AssetGallery.module.css";
@@ -21,7 +22,10 @@ export default function AssetGallery({
 }: AssetGalleryProps) {
   const [filter, setFilter] = useState<Filter>("all");
   const [assets, setAssets] = useState(initialAssets);
+  const [error, setError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [pending, startTransition] = useTransition();
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const filters: { id: Filter; label: string }[] = useMemo(
     () => [
@@ -32,22 +36,68 @@ export default function AssetGallery({
     [],
   );
 
+  function refresh(nextFilter: Filter = filter) {
+    startTransition(() => {
+      void listAssets(workspaceId, nextFilter)
+        .then(setAssets)
+        .catch((err: unknown) => {
+          setError(err instanceof Error ? err.message : "加载资产失败");
+        });
+    });
+  }
+
   function changeFilter(next: Filter) {
     setFilter(next);
-    startTransition(() => {
-      void listAssets(workspaceId, next).then(setAssets);
-    });
+    setError(null);
+    refresh(next);
+  }
+
+  async function onUpload(files: FileList | null) {
+    if (!files?.length) return;
+    setError(null);
+    setUploading(true);
+    try {
+      for (const file of Array.from(files).slice(0, 8)) {
+        if (!file.type.startsWith("image/")) {
+          throw new Error("资产中心目前支持上传图片（PNG / JPG / WEBP / GIF）");
+        }
+        await uploadAsset(workspaceId, file);
+      }
+      refresh(filter === "video" ? "all" : filter);
+      if (filter === "video") setFilter("all");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "上传失败");
+    } finally {
+      setUploading(false);
+    }
   }
 
   return (
     <div className="page-enter">
       <PageHeader
         title="资产中心"
-        description="当前工作空间内的生成与上传素材"
+        description="生成结果与上传参考图统一归档；列表使用缩略图，避免直接加载 2K 原图"
         actions={
-          <Button variant="ghost" disabled title="本地上传入口即将开放">
-            上传 · 即将支持
-          </Button>
+          <>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/gif"
+              multiple
+              hidden
+              onChange={(e) => {
+                void onUpload(e.target.files);
+                e.target.value = "";
+              }}
+            />
+            <Button
+              variant="ghost"
+              disabled={uploading}
+              onClick={() => fileRef.current?.click()}
+            >
+              {uploading ? "上传中…" : "上传图片"}
+            </Button>
+          </>
         }
       />
 
@@ -64,28 +114,48 @@ export default function AssetGallery({
         ))}
       </div>
 
+      {error ? (
+        <p className={styles.error} role="alert">
+          {error}
+        </p>
+      ) : null}
+
       <div className={cn(styles.grid, pending && styles.pending)}>
         {assets.length === 0 ? (
-          <p className={styles.empty}>暂无资产。在对话里生成图片/视频后会出现在这里。</p>
+          <div className={styles.emptyBox}>
+            <strong>还没有资产</strong>
+            <p>
+              在创作对话里生成图片/视频，或点右上角「上传图片」放入参考图，之后可在对话中附参考图改稿。
+            </p>
+          </div>
         ) : null}
         {assets.map((asset) => (
           <article key={asset.id} className={styles.asset}>
-            {asset.url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={asset.url}
-                alt={asset.name}
-                className={styles.mediaImg}
-              />
-            ) : (
-              <div className={cn(styles.media, `thumb-${asset.tone}`)} />
-            )}
+            <div className={styles.mediaWrap}>
+              {asset.url || asset.thumbUrl ? (
+                <MediaPreview
+                  url={asset.url}
+                  thumbUrl={asset.thumbUrl}
+                  kind={asset.kind}
+                  previewKind={asset.previewKind}
+                  mimeType={asset.mimeType}
+                  alt={asset.name}
+                  className={styles.mediaImg}
+                  preferThumb
+                  controls={asset.previewKind === "video"}
+                />
+              ) : (
+                <div className={cn(styles.media, `thumb-${asset.tone}`)} />
+              )}
+              {asset.kind === "video" ? (
+                <span className={styles.badge}>
+                  {asset.previewKind === "poster" ? "视频海报" : "视频"}
+                </span>
+              ) : null}
+            </div>
             <div className={styles.cap}>
               <strong>{asset.name}</strong>
-              <span>
-                {asset.meta}
-                {asset.kind === "video" ? " · 视频" : ""}
-              </span>
+              <span>{asset.meta}</span>
             </div>
           </article>
         ))}

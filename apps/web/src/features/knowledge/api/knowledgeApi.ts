@@ -85,6 +85,13 @@ function mapHit(raw: Record<string, unknown>): KnowledgeHit {
     url: resolveMediaUrl(
       raw.url != null ? String(raw.url) : undefined,
     ),
+    thumbUrl: resolveMediaUrl(
+      raw.thumbUrl != null
+        ? String(raw.thumbUrl)
+        : raw.thumb_url != null
+          ? String(raw.thumb_url)
+          : undefined,
+    ),
   };
 }
 
@@ -97,6 +104,13 @@ function mapItem(raw: Record<string, unknown>): KnowledgeItem {
     summary: String(raw.summary ?? ""),
     url: resolveMediaUrl(
       raw.url != null ? String(raw.url) : undefined,
+    ),
+    thumbUrl: resolveMediaUrl(
+      raw.thumbUrl != null
+        ? String(raw.thumbUrl)
+        : raw.thumb_url != null
+          ? String(raw.thumb_url)
+          : undefined,
     ),
     hasEmbedding: Boolean(raw.hasEmbedding ?? raw.has_embedding),
   };

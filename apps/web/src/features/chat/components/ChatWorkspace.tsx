@@ -13,10 +13,16 @@ import {
   getConversationMessages,
   sendMessage,
 } from "@/features/chat";
+import { uploadAsset } from "@/features/assets";
 import { listKnowledgeBases } from "@/features/knowledge";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
-import type { ChatMessage, ConversationSummary, KnowledgeBase } from "@/types/domain";
+import type {
+  ChatMessage,
+  ConversationSummary,
+  GenerationResult,
+  KnowledgeBase,
+} from "@/types/domain";
 import styles from "./ChatWorkspace.module.css";
 
 export interface ChatWorkspaceProps {
@@ -83,29 +89,103 @@ export default function ChatWorkspace({
     );
   }
 
-  async function handleSend(text: string) {
+  function upsertStreamingAssistant(
+    patch: Partial<ChatMessage> & { content?: string },
+  ) {
+    setMessages((prev) => {
+      const idx = prev.findIndex((m) => m.id === "local_assistant_stream");
+      if (idx < 0) {
+        return [
+          ...prev,
+          {
+            id: "local_assistant_stream",
+            role: "assistant",
+            content: patch.content ?? "",
+            toolLabel: patch.toolLabel,
+            results: patch.results,
+            createdAt: new Date().toISOString(),
+            streaming: true,
+          },
+        ];
+      }
+      const copy = [...prev];
+      copy[idx] = {
+        ...copy[idx],
+        ...patch,
+        streaming: true,
+      };
+      return copy;
+    });
+  }
+
+  async function handleSend(text: string, files: File[]) {
     setError(null);
     setSending(true);
-    setStatusText("正在理解意图…");
+    setStatusText(files.length ? "正在上传参考图…" : "正在理解意图…");
+
+    const localPreviews: GenerationResult[] = files.map((file, i) => ({
+      id: `local_ref_${i}`,
+      label: "参考图",
+      tone: "d",
+      kind: "image",
+      url: URL.createObjectURL(file),
+    }));
+
     const optimistic: ChatMessage = {
       id: `local_u_${Date.now()}`,
       role: "user",
       content: text,
+      results: localPreviews.length ? localPreviews : undefined,
       createdAt: new Date().toISOString(),
     };
-    setMessages((prev) => [...prev, optimistic]);
+    setMessages((prev) => [
+      ...prev.filter((m) => m.id !== "local_assistant_stream"),
+      optimistic,
+    ]);
+
     try {
+      const referenceAssetIds: string[] = [];
+      for (const file of files) {
+        const uploaded = await uploadAsset(workspaceId, file, {
+          conversationId: activeConversationId,
+        });
+        referenceAssetIds.push(uploaded.id);
+      }
+
       const next = await sendMessage(activeConversationId, text, {
         workspaceId,
         knowledgeBaseIds: selectedKbIds,
-        onProgress: (p) => setStatusText(p.status),
+        referenceAssetIds,
+        onProgress: (p) => {
+          setStatusText(p.status);
+          if (p.error) setError(p.error);
+          if (
+            p.content !== undefined ||
+            p.results ||
+            p.toolLabel ||
+            p.done
+          ) {
+            upsertStreamingAssistant({
+              content: p.content,
+              toolLabel: p.toolLabel,
+              results: p.results,
+            });
+          }
+        },
       });
       setMessages(next);
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "发送失败");
-      setMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
+      setError(err instanceof Error ? err.message : "发送失败，请稍后重试");
+      setMessages((prev) =>
+        prev.filter(
+          (m) => m.id !== optimistic.id && m.id !== "local_assistant_stream",
+        ),
+      );
     } finally {
+      for (const item of localPreviews) {
+        if (item.url?.startsWith("blob:")) URL.revokeObjectURL(item.url);
+      }
       setSending(false);
       setStatusText(null);
     }
@@ -122,14 +202,17 @@ export default function ChatWorkspace({
     }
   }
 
+  const showEmptyThread =
+    !pending && !sending && messages.length === 0 && !error;
+
   return (
     <div className={`page-enter ${styles.wrap}`}>
       <PageHeader
         title="创作对话"
         description={
           active
-            ? `${active.title} · 文本问答 / 生图 / 生视频（自动识别意图）`
-            : "文本问答 / 生图 / 生视频（自动识别意图）"
+            ? `${active.title} · 问答 / 生图 / 生视频 / 参考图改稿`
+            : "问答 / 生图 / 生视频 / 参考图改稿"
         }
         actions={
           <Button variant="ghost" onClick={() => void handleNewChat()}>
@@ -141,7 +224,10 @@ export default function ChatWorkspace({
       <div className={styles.layout}>
         <Panel className={styles.sessions}>
           {conversations.length === 0 ? (
-            <p className={styles.hint}>暂无会话，点右上角新建。</p>
+            <div className={styles.emptyBox}>
+              <strong>还没有会话</strong>
+              <p>点右上角「新建对话」，从一句 brief 开始。</p>
+            </div>
           ) : null}
           {conversations.map((c) => (
             <Link
@@ -166,7 +252,9 @@ export default function ChatWorkspace({
           <div className={styles.kbBar}>
             <span className={styles.kbLabel}>引用知识库</span>
             {knowledgeBases.length === 0 ? (
-              <span className={styles.hint}>当前空间暂无知识库</span>
+              <span className={styles.hint}>
+                当前空间暂无知识库 · 可先去知识库页创建
+              </span>
             ) : (
               knowledgeBases.map((kb) => (
                 <label key={kb.id} className={styles.kbChip}>
@@ -185,13 +273,31 @@ export default function ChatWorkspace({
             {pending && messages.length === 0 ? (
               <p className={styles.hint}>加载对话…</p>
             ) : null}
+            {showEmptyThread ? (
+              <div className={styles.emptyBox}>
+                <strong>从一句需求开始</strong>
+                <p>
+                  例如：「按参考图做商店页头图，再偏暖一点」或「根据知识库写发行
+                  brief」。也可以先点下方「附参考图」。
+                </p>
+              </div>
+            ) : null}
             {messages.map((m) => (
               <MessageBubble key={m.id} message={m} />
             ))}
-            {sending && statusText ? (
-              <p className={styles.hint}>{statusText}</p>
+            {error ? (
+              <div className={styles.error} role="alert">
+                <strong>出错了</strong>
+                <p>{error}</p>
+                <button
+                  type="button"
+                  className={styles.errorDismiss}
+                  onClick={() => setError(null)}
+                >
+                  知道了
+                </button>
+              </div>
             ) : null}
-            {error ? <p className={styles.error}>{error}</p> : null}
           </div>
           <ChatComposer
             onSend={handleSend}

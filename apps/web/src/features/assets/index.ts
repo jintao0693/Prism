@@ -1,1 +1,1 @@
-export { listAssets } from "./api/assetsApi";
+export { listAssets, uploadAsset } from "./api/assetsApi";

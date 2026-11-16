@@ -19,6 +19,8 @@ class PrismDeps:
     db: AsyncSession
     media: MediaGateway = field(default_factory=MediaGateway)
     knowledge_base_ids: list[str] = field(default_factory=list)
+    # 本轮用户显式附带的参考图资产 ID（优先于会话最近生成图）
+    reference_asset_ids: list[str] = field(default_factory=list)
     # 本轮之前的 user/assistant 历史（已裁剪），供多轮对话
     history_messages: list[dict[str, str]] = field(default_factory=list)
     compact_generation: int = 0

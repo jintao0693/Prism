@@ -14,6 +14,8 @@ from sqlalchemy.orm import selectinload
 
 from app.api.deps import RequestContext, require_workspace
 from app.core.db import get_db
+from app.core.storage import get_storage
+from app.models.asset import Asset
 from app.models.conversation import Conversation, Message
 from app.schemas.conversation import (
     ChatMessageOut,
@@ -37,12 +39,34 @@ from app.services.providers.registry import build_volcengine_client
 router = APIRouter(prefix="/conversations", tags=["对话"])
 
 
-def _msg_out(message: Message) -> ChatMessageOut:
+async def _enrich_results(db: AsyncSession, raw: list) -> list[GenerationResultOut]:
+    """用资产表补齐 url / thumbUrl，避免历史 JSON 缺预览或指向失效路径。"""
+    from app.services.media.preview import asset_preview_fields
+
+    out: list[GenerationResultOut] = []
+    for item in raw:
+        data = dict(item) if isinstance(item, dict) else {}
+        asset_id = str(data.get("id") or "")
+        asset = await db.get(Asset, asset_id) if asset_id else None
+        if asset and asset.storage_key:
+            preview = asset_preview_fields(asset)
+            data["url"] = preview["url"] or data.get("url")
+            data["thumbUrl"] = preview["thumbUrl"]
+            data["mimeType"] = preview["mimeType"]
+            data["previewKind"] = preview["previewKind"]
+            if not data.get("kind"):
+                data["kind"] = asset.kind
+        out.append(GenerationResultOut.model_validate(data))
+    return out
+
+
+async def _msg_out(db: AsyncSession, message: Message) -> ChatMessageOut:
     """ORM Message → 响应模型。"""
     results = None
     if message.results_json:
         raw = json.loads(message.results_json)
-        results = [GenerationResultOut.model_validate(item) for item in raw]
+        if isinstance(raw, list):
+            results = await _enrich_results(db, raw)
     return ChatMessageOut(
         id=message.id,
         role=message.role,  # type: ignore[arg-type]
@@ -126,7 +150,7 @@ async def get_messages(
     )
     if not conv or conv.tenant_id != ctx.tenant_id or conv.workspace_id != ctx.workspace_id:
         raise HTTPException(status_code=404, detail="会话不存在")
-    return [_msg_out(m) for m in conv.messages]
+    return [await _msg_out(db, m) for m in conv.messages]
 
 
 @router.post("/{conversation_id}/compact", response_model=CompactOut)
@@ -166,11 +190,38 @@ async def send_message(
     if not conv or conv.tenant_id != ctx.tenant_id or conv.workspace_id != ctx.workspace_id:
         raise HTTPException(status_code=404, detail="会话不存在")
 
+    ref_ids = [x for x in (body.reference_asset_ids or []) if x][:4]
+    ref_cards: list[dict] = []
+    if ref_ids:
+        storage = get_storage()
+        for asset_id in ref_ids:
+            asset = await db.get(Asset, asset_id)
+            if (
+                not asset
+                or asset.tenant_id != ctx.tenant_id
+                or asset.workspace_id != ctx.workspace_id
+                or asset.is_deleted
+                or asset.kind != "image"
+            ):
+                raise HTTPException(status_code=400, detail=f"参考图不可用：{asset_id}")
+            if not asset.source_conversation_id:
+                asset.source_conversation_id = conversation_id
+            ref_cards.append(
+                {
+                    "id": asset.id,
+                    "label": "参考图",
+                    "tone": "d",
+                    "kind": "image",
+                    "url": storage.public_url(asset.storage_key) if asset.storage_key else None,
+                },
+            )
+
     user_msg = Message(
         id=f"m_{uuid.uuid4().hex[:12]}",
         conversation_id=conversation_id,
         role="user",
         content=body.content,
+        results_json=json.dumps(ref_cards, ensure_ascii=False) if ref_cards else None,
     )
     db.add(user_msg)
     await db.flush()
@@ -201,6 +252,7 @@ async def send_message(
         db=db,
         media=media,
         knowledge_base_ids=body.knowledge_base_ids,
+        reference_asset_ids=ref_ids,
         history_messages=history,
         compact_generation=int(conv.compact_generation or 0),
     )

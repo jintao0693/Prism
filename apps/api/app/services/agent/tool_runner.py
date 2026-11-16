@@ -12,7 +12,6 @@ import re
 from collections.abc import AsyncIterator
 from typing import Any
 
-from app.core.storage import get_storage
 from app.models.asset import Asset
 from app.services.agent.asset_memory import (
     dumps_asset_meta,
@@ -20,6 +19,7 @@ from app.services.agent.asset_memory import (
     list_conversation_assets,
     read_asset_bytes,
     resolve_last_image_asset,
+    resolve_reference_image,
     wants_image_refine,
     wants_image_to_video,
 )
@@ -70,25 +70,39 @@ async def run_tool_agent(
             *history,
         ]
 
+    ref_image = await resolve_reference_image(
+        deps.db,
+        asset_ids=deps.reference_asset_ids,
+        tenant_id=deps.tenant_id,
+        workspace_id=deps.workspace_id,
+    )
     last_image = await resolve_last_image_asset(
         deps.db,
         conversation_id=deps.conversation_id,
         tenant_id=deps.tenant_id,
     )
+    parent_image = ref_image or last_image
+    has_ref = ref_image is not None
     tool = _select_tool(
         intent=intent,
         user_text=user_text,
         has_knowledge=has_knowledge,
-        has_last_image=last_image is not None,
+        has_last_image=parent_image is not None,
+        has_reference_image=has_ref,
     )
     yield {
         "type": "tool.planned",
-        "data": {"tool": tool, "hasLastImage": bool(last_image)},
+        "data": {
+            "tool": tool,
+            "hasLastImage": bool(last_image),
+            "hasReferenceImage": has_ref,
+            "parentAssetId": parent_image.id if parent_image else None,
+        },
     }
 
     system = build_system_prompt(
         PRISM_SYSTEM_INSTRUCTIONS
-        + "\n\n你可以使用会话中的生成资产；改图/出视频时优先复用上一张图。",
+        + "\n\n你可以使用会话中的生成资产与用户上传的参考图；改图/出视频时优先复用参考图或上一张图。",
         workspace_id=deps.workspace_id,
         knowledge_base_ids=deps.knowledge_base_ids,
         compact_generation=deps.compact_generation,
@@ -99,7 +113,7 @@ async def run_tool_agent(
             deps,
             user_text=user_text,
             mode=tool,
-            parent=last_image,
+            parent=parent_image,
         ):
             yield event
         return
@@ -109,7 +123,7 @@ async def run_tool_agent(
             deps,
             user_text=user_text,
             mode=tool,
-            parent=last_image,
+            parent=parent_image,
         ):
             yield event
         return
@@ -169,11 +183,15 @@ def _select_tool(
     user_text: str,
     has_knowledge: bool,
     has_last_image: bool,
+    has_reference_image: bool = False,
 ) -> str:
     """意图 + 规则 → 工具名。"""
+    has_image = has_last_image or has_reference_image
+
     if intent == "video" or wants_image_to_video(user_text):
-        if has_last_image and (
-            wants_image_to_video(user_text)
+        if has_image and (
+            has_reference_image
+            or wants_image_to_video(user_text)
             or wants_image_refine(user_text)
             or "图" in user_text
         ):
@@ -181,9 +199,17 @@ def _select_tool(
         return "text_to_video"
 
     if intent == "image":
-        if has_last_image and wants_image_refine(user_text):
+        # 用户本轮附带参考图 → 默认图生图；否则「再改一点」才走 i2i
+        if has_image and (has_reference_image or wants_image_refine(user_text)):
             return "image_to_image"
         return "text_to_image"
+
+    # 附了参考图但意图被判成 chat：仅在明确改图/出片时抢路由
+    if has_reference_image:
+        if wants_image_to_video(user_text):
+            return "image_to_video"
+        if wants_image_refine(user_text):
+            return "image_to_image"
 
     if intent == "knowledge" and has_knowledge:
         if _VISUAL_KB_RE.search(user_text):
@@ -243,20 +269,31 @@ async def _run_image_tool(
         source_conversation_id=deps.conversation_id,
     )
     deps.db.add(asset)
-    url = get_storage().public_url(key)
+    from app.services.media.preview import asset_preview_fields
+
+    preview = asset_preview_fields(asset)
+    url = preview["url"]
     card = {
         "id": asset_id,
         "label": "图生图" if mode == "image_to_image" else "生图",
         "tone": "a",
         "kind": "image",
         "url": url,
+        "thumbUrl": preview["thumbUrl"],
+        "mimeType": preview["mimeType"],
+        "previewKind": preview["previewKind"],
         "parentAssetId": parent_id,
     }
     deps.generated_assets.append(card)
     await deps.db.flush()
     yield {
         "type": "tool.result",
-        "data": {"name": tool_name, "asset_id": asset_id, "url": url},
+        "data": {
+            "name": tool_name,
+            "asset_id": asset_id,
+            "url": url,
+            "thumbUrl": preview["thumbUrl"],
+        },
     }
     content = (
         f"已完成{'图生图' if mode == 'image_to_image' else '生图'}"
@@ -327,7 +364,7 @@ async def _run_video_tool(
         yield item
     try:
         asset_id, result, key = await task
-    except Exception as exc:  # noqa: BLE001 — surface provider errors in SSE
+    except Exception as exc:
         err = f"视频生成失败：{exc}"
         yield {"type": "tool.result", "data": {"name": tool_name, "error": str(exc)}}
         yield {"type": "text.delta", "data": {"text": err}}
@@ -355,20 +392,31 @@ async def _run_video_tool(
         source_conversation_id=deps.conversation_id,
     )
     deps.db.add(asset)
-    url = get_storage().public_url(key)
+    from app.services.media.preview import asset_preview_fields
+
+    preview = asset_preview_fields(asset)
+    url = preview["url"]
     card = {
         "id": asset_id,
         "label": "图生视频" if mode == "image_to_video" else "生视频",
         "tone": "c",
         "kind": "video",
         "url": url,
+        "thumbUrl": preview["thumbUrl"],
+        "mimeType": preview["mimeType"],
+        "previewKind": preview["previewKind"],
         "parentAssetId": parent_id,
     }
     deps.generated_assets.append(card)
     await deps.db.flush()
     yield {
         "type": "tool.result",
-        "data": {"name": tool_name, "asset_id": asset_id, "url": url},
+        "data": {
+            "name": tool_name,
+            "asset_id": asset_id,
+            "url": url,
+            "thumbUrl": preview["thumbUrl"],
+        },
     }
     content = (
         f"已完成{'图生视频' if mode == 'image_to_video' else '视频生成'}"

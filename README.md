@@ -1,226 +1,170 @@
 # Prism
 
-**多租户 SaaS 多模态 Agent 平台** — 用对话完成品牌知识检索、图片/视频生成、素材归档；后续覆盖社媒矩阵发布与付费投放（巨量 / Meta）。
+**用对话做品牌内容生产。**  
+查规范 → 出图出片 → 改一版 → 归档资产；同一套多租户控制台里完成，后续可接到社媒发布与付费投放。
 
 [![CI](https://github.com/jintao0693/Prism/actions/workflows/ci.yml/badge.svg)](https://github.com/jintao0693/Prism/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Python](https://img.shields.io/badge/Python-3.11+-green.svg)](apps/api)
-[![Next.js](https://img.shields.io/badge/Next.js-15-black.svg)](apps/web)
 
 | | |
 |---|---|
-| **开发者** | [jintao](https://github.com/jintao0693)（`jintao0693`） |
-| **仓库** | https://github.com/jintao0693/Prism |
-| **状态** | MVP 进行中（对话 / 知识库 / 资产 / 火山方舟已接通） |
-| **路线图** | [ROADMAP.md](ROADMAP.md) |
+| **开发者** | [jintao](https://github.com/jintao0693) |
+| **状态** | MVP 可用（创作对话 / 知识库 / 资产 / 火山方舟） |
+| **产品说明** | [docs/PRODUCT.md](docs/PRODUCT.md) |
 | **许可** | MIT |
 
 ---
 
-## 产品简介
+## 解决什么问题
 
-Prism 面向营销与内容团队，把「查品牌知识 → 出图出片 → 管素材 →（后续）发社媒 / 投广告」收进同一套多租户控制台：
+营销与内容团队日常要在「品牌规范、历史素材、生图工具、剪辑、网盘」之间来回跳。Prism 把这条链路收成一次对话：
 
-1. **创作对话**：自然语言驱动文本问答、Seedream 生图、Seedance 生视频  
-2. **知识库**：文档 / 图片入库，文本问答 + 多模态向量图搜图（视频片段检索为 Phase 2）  
-3. **资产中心**：生成结果与上传素材统一归档、预览、打标  
-4. **租户设置**：火山方舟（字节）API Key 与模型 ID 租户级隔离配置  
+1. **先对齐品牌** — 把设定、主色、禁忌词、历史 KV 放进知识库，提问时直接引用  
+2. **再说人话出片** — 「做一张商店页头图」「再偏暖一点」「做成 5 秒预告」  
+3. **改稿不断血** — 每一轮生成记住上一张图，图生图 / 图生视频可追溯  
+4. **素材进资产库** — 结果自动归档，方便后续复用（发布与投放在路线图里）
 
-详细产品说明见 [docs/PRODUCT.md](docs/PRODUCT.md)。
-
----
-
-## 功能一览（当前）
-
-| 模块 | 能力 | 说明 |
-|------|------|------|
-| 账号 / 租户 | 登录、工作空间隔离 | JWT + `X-Workspace-Id` |
-| 对话 Agent | 文本问答、文/图生图、文/图生视频、KB 工具编排 | 意图+规则选工具；资产记忆；有 Key 走方舟 |
-| 知识库 | 文档/图片入库、文本检索、图搜图 | 向量走方舟 multimodal embedding |
-| 资产 | 列表 / 预览 / 标签 / 生成血缘 | 与对话生成任务联动 |
-| 设置 | 火山方舟配置、连通测试 | 对话 / 生图 / 视频 / 向量四类模型 |
-| 基础设施 | Docker Compose | Postgres / Redis / MinIO（可选） |
-
-**规划中**：视频片段检索、社媒发布、巨量 / Meta 投放 — 见产品文档 Phase 2 / 3。
+适合：品牌 / 电商运营、游戏发行内容组、投放创意、内容主理人。
 
 ---
 
-## 技术栈
+## 现在能做什么
 
-| 层 | 技术 |
-|----|------|
-| 前端 | Next.js 15（App Router）+ TypeScript |
-| 后端 | FastAPI + SQLAlchemy（异步）+ Pydantic |
-| Agent | Pydantic AI Harness 形态（可选 extras） |
-| 模型 | 火山方舟 Ark：Chat / Seedream / Seedance / Embedding Vision |
-| 数据 | 默认 SQLite；生产建议 PostgreSQL + pgvector |
-| 队列 / 缓存 | Redis（可选） |
-| 存储 | 本地目录或 S3 兼容（MinIO） |
+| 你想做的事 | Prism 怎么帮你 |
+|------------|----------------|
+| 问品牌主色、立绘禁忌、活动话术 | 勾选知识库，对话里直接答，可引用入库文档 |
+| 从零出一张主视觉 / 封面 / KV | 自然语言生图，结果进资产中心 |
+| 在上一张基础上改色、改氛围、保留构图 | 自动走图生图，并记下父子素材关系 |
+| 把定稿静帧做成短预告 | 图生视频，带任务进度 |
+| 多团队共用、密钥隔离 | 租户 / 工作空间隔离；火山 Key 租户自配 |
 
-更多架构说明见 [docs/TECHNICAL.md](docs/TECHNICAL.md)、[docs/STRUCTURE.md](docs/STRUCTURE.md)。
+**下一阶段**：视频片段检索、社媒矩阵发布、巨量 / Meta 投放草稿 — 见 [ROADMAP.md](ROADMAP.md)。
 
 ---
 
-## 仓库结构
+## 产品案例：一款二次元开放世界的发行周
 
+以下三个案例串起同一款虚构手游 **《幻境：星落传说》** 的上线前内容工作：先把视觉规范沉淀进知识库，再产出商店页主视觉并多轮改稿，最后用定稿静帧拉一条预告短视频。完整联调记录与复现脚本见 [docs/GAME_CASES.md](docs/GAME_CASES.md)。
+
+### 案例 1 · 发行周：把「能拍的规范」问清楚
+
+**场景**  
+发行内容组周一开会：商店页、社媒 KV、预告片都要开做，但美术规范散落在几份文档里。主美不在场，运营又怕主色、禁忌词说错，返工成本很高。
+
+**在 Prism 里怎么做**
+
+1. 新建知识库「幻境：星落传说 · 设定库」  
+2. 入库品牌视觉说明（主色深空靛 / 星辉金、立绘禁忌、开放世界主题词）  
+3. 开创作对话，勾选该知识库，连续追问：主色与点缀色是什么？立绘有什么不能碰？商店页头图更适合什么氛围？
+
+**产品价值**  
+不是「搜一下文档」，而是把规范变成对话里的即时约束：后续出图、改稿、做预告时，团队对「什么叫对」有同一套答案。
+
+**验收要点**：能创建知识库并入库；勾选后回答命中主色与立绘禁忌；回答可被后续创意直接当 brief 用。
+
+---
+
+### 案例 2 · 商店页主视觉：从一句话到可改稿的 KV
+
+**场景**  
+商店页头图要在周四前提交。需求是：横版、深空靛底、星辉金点缀、旅人站在月下遗迹前、干净留白、适合应用商店头图。初稿出来后发行觉得「偏冷、不够召回」，要求**构图和人物位置不动**，整体再偏暖一点。
+
+**在 Prism 里怎么做**
+
+1. 同一会话里先下达完整商店页 brief，生成第一版主视觉  
+2. 直接说：「再偏暖一点，保留构图与人物位置」  
+3. 在资产中心打开两版，确认第二版挂在第一版的改稿血缘上
+
+**产品价值**  
+创意迭代留在对话里，不必导出到外部修图工具再传回；「上一张」被记住，改稿指令可以很短；父子关系可追溯，方便评审「改了什么」。
+
+**验收要点**：首轮走文生图；「再偏暖」走图生图；新资产带 `parentAssetId`；两版都能在资产中心预览。
+
+---
+
+### 案例 3 · 预告氛围片：定稿静帧一键拉成 5 秒片
+
+**场景**  
+商店页 KV 已定。发行还要一条 **5 秒氛围预告** 给商店详情与社媒首发：镜头缓慢推进、星尘飘落，气质跟主视觉一致，不能另起炉灶重新分镜。
+
+**在 Prism 里怎么做**
+
+1. 仍在同一创作会话（承接案例 2 的最近一张图）  
+2. 说：「把上一张主视觉做成 5 秒预告氛围短视频：镜头缓慢推进，星尘飘落」  
+3. 等待视频任务进度完成，成片进入资产中心，与静帧素材放在一起管理
+
+**产品价值**  
+跨模态接力：静帧 → 动态预告，不必再开一条互不相关的视频流水线；参考图来自对话上下文里的定稿，品牌连续性更好。
+
+**验收要点**：识别为图生视频；引用上一张图；产出可播放成片并归档。
+
+---
+
+### 三条案例串起来看
+
+```text
+规范入库 → 对话对齐 brief
+        → 商店页 KV 文生图
+        → 「再偏暖」图生图改稿（可追溯）
+        → 定稿静帧 → 5 秒氛围预告
+        → 全部进入资产中心
 ```
-Prism/
-├── apps/
-│   ├── web/          # Next.js 前端控制台
-│   └── api/          # FastAPI 后端 + Agent / Media / Knowledge
-├── design/prism-ui/  # 界面 HTML 草稿
-├── docs/             # 产品 / 技术 / IA / 目录结构
-├── infra/            # docker-compose（Postgres / Redis / MinIO）
-├── LICENSE
-└── README.md
-```
+
+这就是 Prism MVP 想证明的闭环：**知识约束创作，对话驱动改稿，多模态结果统一归档**。
 
 ---
 
-## 快速开始
+## 5 分钟体验
 
-### 环境要求
-
-- Node.js 20+
-- Python 3.11+
-- （可选）Docker：跑依赖或全栈
-
-### 0. 一键准备依赖（推荐）
+演示账号：`linqing@prism.demo` / `prism123`（工作空间示例 `ws_spring`）
 
 ```bash
-# Windows PowerShell
-.\scripts\dev.ps1
+# 准备依赖
+.\scripts\dev.ps1          # Windows
+# ./scripts/dev.sh         # macOS / Linux
 
-# macOS / Linux
-chmod +x scripts/dev.sh && ./scripts/dev.sh
-```
-
-脚本会创建 venv、安装依赖、生成 `.env` / `.env.local`，并打印启动命令。
-
-### 1. 启动后端
-
-```bash
-cd apps/api
-# Windows
-.\.venv\Scripts\activate
-# macOS / Linux: source .venv/bin/activate
-
+# 终端 1 · API
+cd apps/api && .\.venv\Scripts\activate
 uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+
+# 终端 2 · 控制台
+cd apps/web && npm run dev
 ```
 
-- API 文档：http://127.0.0.1:8000/docs  
-- 健康检查：http://127.0.0.1:8000/health  
+打开 http://localhost:3000 → 登录 → 选工作空间 → **设置**里填写火山方舟 Key（可选；无 Key 也可走演示模式看流程）。
 
-**演示账号**
-
-| 字段 | 值 |
-|------|-----|
-| 邮箱 | `linqing@prism.demo` |
-| 密码 | `prism123` |
-| 工作空间示例 | `ws_spring` |
-
-### 2. 启动前端
+复现上文三个案例：
 
 ```bash
-cd apps/web
-npm run dev
+# 需本机 API 已启动；配好火山 Key 可跑真图真视频
+python scripts/run_game_cases.py
 ```
 
-打开 http://localhost:3000 → 登录 → 选择工作空间 → **设置** 中配置火山方舟。
-
-`apps/web/.env.local` 默认（脚本已生成）：
-
-```env
-NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000/api/v1
-NEXT_PUBLIC_USE_MOCK=false
-```
-
-无后端只想看 UI 时，把 `NEXT_PUBLIC_USE_MOCK=true`。
-
-### 3.（可选）Docker
-
-```bash
-# 仅 Postgres / Redis / MinIO
-docker compose -f infra/docker-compose.yml up -d
-
-# 全栈（api + web + 依赖）
-docker compose -f infra/docker-compose.yml --profile full up -d --build
-```
-
-使用 Postgres 时，将 `apps/api/.env` 的 `DATABASE_URL` 改为：
-
-`postgresql+asyncpg://prism:prism@localhost:5432/prism`
+更细的安装、Docker、模型配置见 [apps/api/README.md](apps/api/README.md)、[apps/web/README.md](apps/web/README.md)。
 
 ---
 
-## 火山方舟（字节）接入
+## 文档
 
-在控制台 **设置** 页填写，或调用：
-
-`PUT /api/v1/settings/providers/volcengine`
-
-| 配置项 | 用途 | Ark 能力 |
-|--------|------|----------|
-| API Key | 鉴权 | — |
-| chatModel | 对话 | `/chat/completions` |
-| imageModel | 生图 | Seedream `/images/generations` |
-| videoModel | 生视频 | Seedance 异步任务 |
-| embeddingModel | 向量 | `/embeddings/multimodal` |
-
-启用且 Key 有效后：对话 / 生图 / 生视频 / 知识库检索优先走火山；否则回退演示 Provider。  
-模型 ID 请换成你在[火山方舟控制台](https://console.volcengine.com/ark)已开通的 Model / Endpoint ID。
-
-后端细节：[apps/api/README.md](apps/api/README.md)
-
----
-
-## 文档索引
-
-| 文档 | 内容 |
-|------|------|
-| [docs/PRODUCT.md](docs/PRODUCT.md) | 产品定位、用户、MVP / Phase 范围、旅程 |
-| [docs/TECHNICAL.md](docs/TECHNICAL.md) | 架构、租户模型、Agent、Media、检索、安全 |
-| [docs/STRUCTURE.md](docs/STRUCTURE.md) | Monorepo 目录与分包约定 |
-| [docs/IA.md](docs/IA.md) | 页面信息架构 |
-| [docs/PROGRESS.md](docs/PROGRESS.md) | **当前开发进度**（做到哪了） |
-| [docs/GAME_CASES.md](docs/GAME_CASES.md) | 游戏向 3 案例联调（KB / 生图改稿 / 图生视频） |
-| [ROADMAP.md](ROADMAP.md) | 近期 / Phase 2 / Phase 3 路线图 |
-| [CONTRIBUTING.md](CONTRIBUTING.md) | 如何贡献 |
-| [SECURITY.md](SECURITY.md) | 安全披露 |
-| [CHANGELOG.md](CHANGELOG.md) | 变更记录 |
-| [apps/web/README.md](apps/web/README.md) | 前端开发说明 |
-| [apps/api/README.md](apps/api/README.md) | 后端开发与火山配置 |
-| `design/prism-ui/index.html` | 界面视觉草稿 |
-
----
-
-## 为什么好用（开源目标）
-
-| 目标 | 现状 |
-|------|------|
-| 5 分钟跑起来 | `scripts/dev.*` + 演示账号开箱即用 |
-| 无 Key 也能体验 | 默认演示模式；配火山后无缝切真模型 |
-| 贡献路径清晰 | Issue / PR 模板 + CI + CONTRIBUTING |
-| 架构可演进 | Media Gateway / 租户 Provider / Phase 预留 |
-
-接下来重点打磨：任务进度与错误提示、Alembic 迁移、更多测试、截图/演示 GIF。见 [ROADMAP.md](ROADMAP.md)。
+| 想了解 | 去看 |
+|--------|------|
+| 产品定位、用户、MVP / Phase 范围 | [docs/PRODUCT.md](docs/PRODUCT.md) |
+| 当前做到哪了 | [docs/PROGRESS.md](docs/PROGRESS.md) |
+| 游戏向案例联调详情 | [docs/GAME_CASES.md](docs/GAME_CASES.md) |
+| 路线图 | [ROADMAP.md](ROADMAP.md) |
+| 架构与目录 | [docs/TECHNICAL.md](docs/TECHNICAL.md)、[docs/STRUCTURE.md](docs/STRUCTURE.md) |
+| 如何贡献 | [CONTRIBUTING.md](CONTRIBUTING.md) |
 
 ---
 
 ## 开发者与贡献
 
-本项目由 **jintao**（GitHub [@jintao0693](https://github.com/jintao0693)）设计与开发维护。作者名单见 [AUTHORS.md](AUTHORS.md)。
-
-欢迎 Issue / PR：请先阅读 [CONTRIBUTING.md](CONTRIBUTING.md) 与 [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)。
-
-本地校验：
+本项目由 **jintao**（[@jintao0693](https://github.com/jintao0693)）设计与维护。欢迎 Issue / PR，请先阅读 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
 ```bash
 cd apps/api && pip install -e ".[dev]" && ruff check app && pytest -q
 cd apps/web && npm run lint && npm run build
 ```
-
----
 
 ## License
 

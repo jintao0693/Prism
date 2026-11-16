@@ -455,9 +455,15 @@ export default function KnowledgeDetail({
             <div className={styles.itemGrid}>
               {items.map((item) => (
                 <div key={item.id} className={styles.item}>
-                  {item.itemType === "image" && item.url ? (
+                  {item.itemType === "image" && (item.thumbUrl || item.url) ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={item.url} alt={item.title} className={styles.itemThumb} />
+                    <img
+                      src={item.thumbUrl || item.url}
+                      alt={item.title}
+                      className={styles.itemThumb}
+                      loading="lazy"
+                      decoding="async"
+                    />
                   ) : (
                     <div
                       className={cn(
@@ -497,9 +503,15 @@ export default function KnowledgeDetail({
 function HitCard({ hit }: { hit: KnowledgeHit }) {
   return (
     <div className={styles.hit}>
-      {hit.url ? (
+      {hit.thumbUrl || hit.url ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={hit.url} alt={hit.title} className={styles.previewImg} />
+        <img
+          src={hit.thumbUrl || hit.url}
+          alt={hit.title}
+          className={styles.previewImg}
+          loading="lazy"
+          decoding="async"
+        />
       ) : (
         <div className={cn(styles.preview, `thumb-${hit.tone}`)} />
       )}
