@@ -54,7 +54,7 @@ services:
       DATABASE_URL: postgresql+asyncpg://prism:prism@postgres:5432/prism
       REDIS_URL: redis://redis:6379/0
       AGENT_DEMO_MODE: "true"
-      CORS_ORIGINS: http://localhost:3000
+      CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
       LOCAL_STORAGE_DIR: /data/storage
     volumes:
       - prism_api_data:/data/storage
@@ -63,18 +63,29 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
 
   web:
     profiles: ["full"]
     build:
       context: ../apps/web
       args:
+        # 浏览器访问宿主机上的 API
         NEXT_PUBLIC_API_BASE_URL: http://localhost:8000/api/v1
         NEXT_PUBLIC_USE_MOCK: "false"
+    environment:
+      # RSC / 服务端请求走 Docker 网络内的 api 服务名
+      API_BASE_URL: http://api:8000/api/v1
     ports:
       - "3000:3000"
     depends_on:
-      - api
+      api:
+        condition: service_healthy
 
 volumes:
   prism_pg:

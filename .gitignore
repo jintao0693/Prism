@@ -25,8 +25,11 @@
 # Local data & IDE
 **/*.db
 **/*.sqlite3
+apps/api/data/
 **/.DS_Store
 .idea/
 .vscode/
 *.pem
 .vercel/
+.ruff_cache/
+.pytest_cache/

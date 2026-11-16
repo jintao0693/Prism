@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import secrets
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -12,27 +13,47 @@ from jose import JWTError, jwt
 from app.core.config import get_settings
 
 
-def hash_password(password: str) -> str:
+def hash_password(password: str, *, salt: bytes | None = None) -> str:
     """
     对明文密码做哈希。
-    演示环境使用 PBKDF2，避免 Windows 下 bcrypt 后端兼容问题；
-    生产可替换为 argon2 / bcrypt。
+    使用随机 salt（写入哈希串），不依赖 SECRET_KEY，避免改密钥后演示账号失效。
+    格式：pbkdf2_sha256$<salt_hex>$<digest_hex>
     """
-    settings = get_settings()
+    salt_bytes = salt if salt is not None else secrets.token_bytes(16)
     dk = hashlib.pbkdf2_hmac(
         "sha256",
         password.encode("utf-8"),
-        settings.secret_key.encode("utf-8"),
+        salt_bytes,
         120_000,
     )
-    return "pbkdf2_sha256$" + dk.hex()
+    return f"pbkdf2_sha256${salt_bytes.hex()}${dk.hex()}"
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    """校验明文与哈希是否匹配。"""
+    """校验明文与哈希是否匹配（兼容旧版：salt=SECRET_KEY 的双段格式）。"""
     if not hashed.startswith("pbkdf2_sha256$"):
         return False
-    return hmac.compare_digest(hash_password(plain), hashed)
+    parts = hashed.split("$")
+    if len(parts) == 3:
+        _, salt_hex, _digest = parts
+        try:
+            salt = bytes.fromhex(salt_hex)
+        except ValueError:
+            return False
+        return hmac.compare_digest(hash_password(plain, salt=salt), hashed)
+
+    # 旧格式：pbkdf2_sha256$<digest>，salt 曾用 SECRET_KEY
+    if len(parts) == 2:
+        settings = get_settings()
+        legacy = hashlib.pbkdf2_hmac(
+            "sha256",
+            plain.encode("utf-8"),
+            settings.secret_key.encode("utf-8"),
+            120_000,
+        )
+        return hmac.compare_digest(hashed, "pbkdf2_sha256$" + legacy.hex())
+
+    return False
 
 
 def create_access_token(

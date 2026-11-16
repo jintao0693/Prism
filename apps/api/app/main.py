@@ -59,8 +59,22 @@ def create_app() -> FastAPI:
 
     @app.get("/health")
     async def health() -> dict:
-        """健康检查。"""
-        return {"ok": True, "env": settings.app_env, "agentDemoMode": settings.agent_demo_mode}
+        """健康检查（含数据库探测）。"""
+        db_ok = False
+        try:
+            from sqlalchemy import text
+
+            async with SessionLocal() as session:
+                await session.execute(text("SELECT 1"))
+                db_ok = True
+        except Exception:
+            db_ok = False
+        return {
+            "ok": db_ok,
+            "db": db_ok,
+            "env": settings.app_env,
+            "agentDemoMode": settings.agent_demo_mode,
+        }
 
     return app
 

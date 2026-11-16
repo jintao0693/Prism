@@ -42,8 +42,8 @@ class Settings(BaseSettings):
     openai_api_key: str | None = None
     agent_demo_mode: bool = True
 
-    # CORS：逗号分隔
-    cors_origins: str = "http://localhost:3000"
+    # CORS：逗号分隔（Windows 上常混用 localhost / 127.0.0.1）
+    cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
 
     @property
     def cors_origin_list(self) -> list[str]:

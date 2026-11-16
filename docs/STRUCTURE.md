@@ -14,18 +14,23 @@ Prism/
 ├── apps/
 │   ├── web/                 # 前端（Next.js App Router + TS）
 │   └── api/                 # 后端 API + Worker 入口（FastAPI / Python）
-├── packages/                # 可选共享（MVP 可暂空，需要再加）
-│   └── shared-types/        # OpenAPI 生成的 TS 类型（后期）
 ├── design/
-│   └── prism-ui/            # 界面草稿（已有 HTML）
-├── docs/                    # 产品 / 技术 / IA / 本结构文档
-├── infra/                   # Docker Compose、迁移、部署清单
-├── scripts/                 # 本地一键脚本
-├── .env.example
+│   └── prism-ui/            # 界面草稿（HTML）
+├── docs/                    # PRODUCT / TECHNICAL / IA / STRUCTURE / PROGRESS
+├── infra/                   # docker-compose（依赖 + profile full）
+├── scripts/                 # dev.ps1 / dev.sh
+├── .github/                 # CI、Issue / PR 模板
+├── AUTHORS.md
+├── CHANGELOG.md
+├── CONTRIBUTING.md
+├── LICENSE
+├── Makefile                 # 偏 Unix；Windows 请用 scripts/dev.ps1
 ├── README.md
-└── pnpm-workspace.yaml      # 或 npm/yarn；前端包管理
-    pyproject.toml           # 后端根依赖（uv / poetry）也可放在 apps/api
+├── ROADMAP.md
+└── SECURITY.md
 ```
+
+> `packages/`、根级 `pnpm-workspace.yaml` 为可选后期规划，当前仓库尚未创建。
 
 **边界**
 

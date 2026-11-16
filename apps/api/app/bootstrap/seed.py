@@ -9,7 +9,7 @@ from datetime import UTC
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import hash_password
+from app.core.security import hash_password, verify_password
 from app.models.asset import Asset
 from app.models.conversation import Conversation, Message
 from app.models.knowledge import KnowledgeBase, KnowledgeItem
@@ -27,10 +27,27 @@ WS_SPRING = "ws_spring"
 WS_BRAND = "ws_brand"
 
 
+DEMO_EMAIL = "linqing@prism.demo"
+DEMO_PASSWORD = "prism123"
+
+
+async def ensure_demo_password(session: AsyncSession) -> None:
+    """演示账号密码失效时自动重哈希（例如旧版 salt=SECRET_KEY）。"""
+    user = await session.scalar(select(User).where(User.email == DEMO_EMAIL))
+    if not user:
+        return
+    if verify_password(DEMO_PASSWORD, user.hashed_password):
+        return
+    user.hashed_password = hash_password(DEMO_PASSWORD)
+    await session.commit()
+    logger.info("已修复演示账号密码哈希：%s", DEMO_EMAIL)
+
+
 async def seed_demo_data(session: AsyncSession) -> None:
     """若库为空则写入演示租户 / 用户 / 空间 / 对话等。"""
     exists = await session.scalar(select(func.count()).select_from(Tenant))
     if exists and exists > 0:
+        await ensure_demo_password(session)
         logger.info("已有数据，跳过种子")
         return
 
@@ -39,9 +56,9 @@ async def seed_demo_data(session: AsyncSession) -> None:
     tenant = Tenant(id=TENANT_ID, name="品牌星云")
     user = User(
         id=USER_ID,
-        email="linqing@prism.demo",
+        email=DEMO_EMAIL,
         name="林清",
-        hashed_password=hash_password("prism123"),
+        hashed_password=hash_password(DEMO_PASSWORD),
         avatar_text="林",
     )
     membership = Membership(

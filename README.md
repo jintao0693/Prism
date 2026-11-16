@@ -182,6 +182,7 @@ docker compose -f infra/docker-compose.yml --profile full up -d --build
 | [docs/TECHNICAL.md](docs/TECHNICAL.md) | 架构、租户模型、Agent、Media、检索、安全 |
 | [docs/STRUCTURE.md](docs/STRUCTURE.md) | Monorepo 目录与分包约定 |
 | [docs/IA.md](docs/IA.md) | 页面信息架构 |
+| [docs/PROGRESS.md](docs/PROGRESS.md) | **当前开发进度**（做到哪了） |
 | [ROADMAP.md](ROADMAP.md) | 近期 / Phase 2 / Phase 3 路线图 |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | 如何贡献 |
 | [SECURITY.md](SECURITY.md) | 安全披露 |

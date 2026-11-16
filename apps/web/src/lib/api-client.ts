@@ -1,12 +1,25 @@
 /**
  * API 客户端。
  * Token：浏览器 localStorage + Cookie（供 RSC 读取）。
+ *
+ * 服务端（RSC）优先读 API_BASE_URL（Docker 内可指向 http://api:8000/...），
+ * 浏览器读 NEXT_PUBLIC_API_BASE_URL（指向宿主机可访问地址）。
  */
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000/api/v1";
+function resolveApiBase(): string {
+  const fallback = "http://127.0.0.1:8000/api/v1";
+  if (typeof window === "undefined") {
+    return (
+      process.env.API_BASE_URL ??
+      process.env.NEXT_PUBLIC_API_BASE_URL ??
+      fallback
+    );
+  }
+  return process.env.NEXT_PUBLIC_API_BASE_URL ?? fallback;
+}
 
-export const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK !== "false";
+/** 仅当显式设为 true 时走前端 mock，默认接真实后端。 */
+export const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === "true";
 
 export class ApiError extends Error {
   status: number;
@@ -84,7 +97,7 @@ export async function apiRequest<T>(
     headers.set("X-Workspace-Id", auth.workspaceId);
   }
 
-  const response = await fetch(`${API_BASE}${path}`, {
+  const response = await fetch(`${resolveApiBase()}${path}`, {
     ...init,
     headers,
     cache: "no-store",

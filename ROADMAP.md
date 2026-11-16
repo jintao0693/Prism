@@ -1,6 +1,7 @@
 # Roadmap
 
-维护者：**jintao**（[@jintao0693](https://github.com/jintao0693)）
+维护者：**jintao**（[@jintao0693](https://github.com/jintao0693)）  
+详细勾选进度见 [docs/PROGRESS.md](docs/PROGRESS.md)。
 
 ## Now（MVP 打磨）
 
@@ -9,10 +10,13 @@
 - [x] Seedream 生图 / Seedance 生视频
 - [x] 多模态 embedding（图搜 / 文本检索）
 - [x] 设置页租户级模型配置
+- [x] 开源基建（CI / 贡献文档 / 脚本）
+- [x] 首跑可用性修复（CORS、密码盐、SSR API URL、mock 默认）
+- [x] 测试加厚起步（security / settings + 冒烟，6 passed）
 - [ ] 端到端联调体验（错误提示、任务进度、空状态）
-- [ ] 完整 Docker 一键栈（api + web + 依赖）
+- [ ] Docker 全栈实机验收
 - [ ] Alembic 正式迁移流（替代仅 create_all）
-- [ ] 基础测试覆盖（auth / settings / media gateway）
+- [ ] README 截图 / 演示 GIF
 
 ## Next（Phase 2）
 
