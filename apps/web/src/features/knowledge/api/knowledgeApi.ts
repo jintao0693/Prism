@@ -1,3 +1,4 @@
+import { apiRequest, USE_MOCK } from "@/lib/api-client";
 import { mockDelay } from "@/lib/mock-delay";
 import type { KnowledgeBase, KnowledgeHit } from "@/types/domain";
 
@@ -42,45 +43,103 @@ const HITS: KnowledgeHit[] = [
   },
 ];
 
+function mapKb(raw: Record<string, unknown>): KnowledgeBase {
+  return {
+    id: String(raw.id),
+    name: String(raw.name),
+    description: String(raw.description ?? ""),
+    documentCount: Number(raw.documentCount ?? raw.document_count ?? 0),
+    imageCount: Number(raw.imageCount ?? raw.image_count ?? 0),
+  };
+}
+
+function mapHit(raw: Record<string, unknown>): KnowledgeHit {
+  const tone = String(raw.tone ?? "a");
+  return {
+    id: String(raw.id),
+    title: String(raw.title),
+    summary: String(raw.summary ?? ""),
+    score: Number(raw.score ?? 0),
+    tone: (tone === "b" || tone === "c" ? tone : "a") as KnowledgeHit["tone"],
+  };
+}
+
 export async function listKnowledgeBases(
   workspaceId: string,
 ): Promise<KnowledgeBase[]> {
-  void workspaceId;
-  await mockDelay();
-  return BASES;
+  if (USE_MOCK) {
+    await mockDelay();
+    return BASES;
+  }
+  const raw = await apiRequest<Record<string, unknown>[]>(
+    "/knowledge-bases",
+    {},
+    { workspaceId },
+  );
+  return raw.map(mapKb);
 }
 
-export async function getKnowledgeBase(kbId: string): Promise<KnowledgeBase> {
-  await mockDelay(120);
-  const found = BASES.find((b) => b.id === kbId);
-  if (!found) {
-    throw new Error(`知识库不存在: ${kbId}`);
+export async function getKnowledgeBase(
+  kbId: string,
+  workspaceId?: string,
+): Promise<KnowledgeBase> {
+  if (USE_MOCK) {
+    await mockDelay(120);
+    const found = BASES.find((b) => b.id === kbId);
+    if (!found) throw new Error(`知识库不存在: ${kbId}`);
+    return found;
   }
-  return found;
+  const raw = await apiRequest<Record<string, unknown>>(
+    `/knowledge-bases/${kbId}`,
+    {},
+    workspaceId ? { workspaceId } : undefined,
+  );
+  return mapKb(raw);
 }
 
 export async function searchByImage(
   kbId: string,
   queryHint?: string,
+  workspaceId?: string,
 ): Promise<KnowledgeHit[]> {
-  void kbId;
-  void queryHint;
-  await mockDelay(450);
-  return HITS;
+  if (USE_MOCK) {
+    void kbId;
+    void queryHint;
+    await mockDelay(450);
+    return HITS;
+  }
+  const raw = await apiRequest<Record<string, unknown>[]>(
+    `/knowledge-bases/${kbId}/search/image`,
+    {
+      method: "POST",
+      body: JSON.stringify({ queryHint: queryHint ?? null }),
+    },
+    workspaceId ? { workspaceId } : undefined,
+  );
+  return raw.map(mapHit);
 }
 
 export async function searchByText(
   kbId: string,
   query: string,
+  workspaceId?: string,
 ): Promise<KnowledgeHit[]> {
-  void kbId;
-  await mockDelay(350);
-  if (!query.trim()) {
-    return HITS;
+  if (USE_MOCK) {
+    await mockDelay(350);
+    if (!query.trim()) return HITS;
+    return HITS.map((h, i) => ({
+      ...h,
+      summary: `与「${query}」相关：${h.summary}`,
+      score: Math.max(0.55, h.score - i * 0.04),
+    }));
   }
-  return HITS.map((h, i) => ({
-    ...h,
-    summary: `与「${query}」相关：${h.summary}`,
-    score: Math.max(0.55, h.score - i * 0.04),
-  }));
+  const raw = await apiRequest<Record<string, unknown>[]>(
+    `/knowledge-bases/${kbId}/search`,
+    {
+      method: "POST",
+      body: JSON.stringify({ query }),
+    },
+    workspaceId ? { workspaceId } : undefined,
+  );
+  return raw.map(mapHit);
 }

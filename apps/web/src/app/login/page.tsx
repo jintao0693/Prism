@@ -21,7 +21,10 @@ export default function LoginPage() {
     setError(null);
     startTransition(() => {
       void loginWithPassword(email, password)
-        .then(() => router.push(routes.workspaces))
+        .then(() => {
+          router.push(routes.workspaces);
+          router.refresh();
+        })
         .catch((err: Error) => setError(err.message || "登录失败"));
     });
   }

@@ -74,6 +74,7 @@ export interface AssetItem {
   kind: AssetKind;
   meta: string;
   tone: "a" | "b" | "c" | "d" | "e" | "f";
+  url?: string;
 }
 
 export interface UsageSummary {

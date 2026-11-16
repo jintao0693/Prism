@@ -2,6 +2,7 @@ import AppShell from "@/components/layout/AppShell";
 import WorkspaceContextBridge from "@/components/layout/WorkspaceContextBridge";
 import { getCurrentUser } from "@/features/auth";
 import { getUsageSummary, getWorkspace } from "@/features/workspace";
+import { withAuthRedirect } from "@/lib/auth-guard";
 
 export default async function WorkspaceLayout({
   children,
@@ -11,11 +12,13 @@ export default async function WorkspaceLayout({
   params: Promise<{ workspaceId: string }>;
 }) {
   const { workspaceId } = await params;
-  const [user, workspace, usage] = await Promise.all([
-    getCurrentUser(),
-    getWorkspace(workspaceId),
-    getUsageSummary(),
-  ]);
+  const [user, workspace, usage] = await withAuthRedirect(() =>
+    Promise.all([
+      getCurrentUser(),
+      getWorkspace(workspaceId),
+      getUsageSummary(),
+    ]),
+  );
 
   return (
     <AppShell

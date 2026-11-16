@@ -32,8 +32,8 @@ export default function KnowledgeDetail({
   function runSearch() {
     startTransition(() => {
       void (tab === "image"
-        ? searchByImage(knowledgeBase.id, query)
-        : searchByText(knowledgeBase.id, query)
+        ? searchByImage(knowledgeBase.id, query, workspaceId)
+        : searchByText(knowledgeBase.id, query, workspaceId)
       ).then(setHits);
     });
   }

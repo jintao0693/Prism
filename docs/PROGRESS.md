@@ -13,6 +13,7 @@
 | 维度 | 状态 | 说明 |
 |------|------|------|
 | 产品 MVP 骨架 | ✅ 基本完成 | 登录、工作空间、对话、知识库、资产、设置页 |
+| 前后端联调 | ✅ 已接通 | 登录→工作空间→对话 SSE→知识库/资产/设置；演示模式可对话，待填火山 Key |
 | 火山方舟接入 | ✅ 代码完成 | Chat / Seedream / Seedance / Embedding；需自备 Key 验收 |
 | 开源基建 | ✅ 完成 | MIT、AUTHORS、CI、Issue/PR 模板、CONTRIBUTING 等 |
 | 首跑可用性 | ✅ 已合入 | CORS、密码盐、SSR URL、mock 默认值已推 main |

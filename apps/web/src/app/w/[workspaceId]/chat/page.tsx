@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { listConversations } from "@/features/chat";
+import { createConversation, listConversations } from "@/features/chat";
 import { routes } from "@/lib/routes";
 
 export default async function ChatIndexPage({
@@ -8,10 +8,10 @@ export default async function ChatIndexPage({
   params: Promise<{ workspaceId: string }>;
 }) {
   const { workspaceId } = await params;
-  const conversations = await listConversations(workspaceId);
-  const first = conversations[0];
-  if (!first) {
-    redirect(routes.workspaceHome(workspaceId));
+  let conversations = await listConversations(workspaceId);
+  if (conversations.length === 0) {
+    const created = await createConversation(workspaceId, "新对话");
+    conversations = [created];
   }
-  redirect(routes.chatConversation(workspaceId, first.id));
+  redirect(routes.chatConversation(workspaceId, conversations[0].id));
 }

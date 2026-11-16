@@ -1,5 +1,6 @@
+import { apiFetch, apiRequest, USE_MOCK } from "@/lib/api-client";
 import { mockDelay } from "@/lib/mock-delay";
-import type { ChatMessage, ConversationSummary } from "@/types/domain";
+import type { ChatMessage, ConversationSummary, GenerationResult } from "@/types/domain";
 
 const CONVERSATIONS: ConversationSummary[] = [
   {
@@ -48,86 +49,164 @@ const MESSAGES: Record<string, ChatMessage[]> = {
       createdAt: "2026-03-20T14:20:00+08:00",
     },
   ],
-  c_teaser: [
-    {
-      id: "m3",
-      role: "user",
-      content: "根据这张主视觉做一条 15 秒种草短视频，竖屏。",
-      createdAt: "2026-03-19T10:00:00+08:00",
-    },
-    {
-      id: "m4",
-      role: "assistant",
-      content: "已规划三镜分镜并提交图生视频任务。成片就绪后会进入资产中心。",
-      toolLabel: "image_to_video · 完成",
-      createdAt: "2026-03-19T10:08:00+08:00",
-    },
-  ],
-  c_pack: [
-    {
-      id: "m5",
-      role: "user",
-      content: "我们包装主色规范是什么？",
-      createdAt: "2026-03-17T09:00:00+08:00",
-    },
-    {
-      id: "m6",
-      role: "assistant",
-      content:
-        "根据知识库「品牌视觉规范」：主色为青石色 #0F6E6A，点缀暖橙 #E8A838，背景保持冷雾白留白，避免使用高饱和紫色。",
-      createdAt: "2026-03-17T09:00:12+08:00",
-    },
-  ],
 };
+
+function mapConversation(raw: Record<string, unknown>): ConversationSummary {
+  const kind = String(raw.kind ?? "chat");
+  return {
+    id: String(raw.id),
+    title: String(raw.title),
+    kind: (kind === "image" || kind === "video" || kind === "chat"
+      ? kind
+      : "chat") as ConversationSummary["kind"],
+    updatedAtLabel: String(raw.updatedAtLabel ?? raw.updated_at_label ?? ""),
+    thumbTone: (String(raw.thumbTone ?? raw.thumb_tone ?? "a") ||
+      "a") as ConversationSummary["thumbTone"],
+  };
+}
+
+function mapMessage(raw: Record<string, unknown>): ChatMessage {
+  const resultsRaw = raw.results;
+  let results: GenerationResult[] | undefined;
+  if (Array.isArray(resultsRaw)) {
+    results = resultsRaw.map((item, i) => {
+      const r = item as Record<string, unknown>;
+      const tone = String(r.tone ?? "a");
+      return {
+        id: String(r.id ?? `r_${i}`),
+        label: String(r.label ?? "结果"),
+        tone: (tone === "b" || tone === "c" ? tone : "a") as GenerationResult["tone"],
+      };
+    });
+  }
+  return {
+    id: String(raw.id),
+    role: raw.role === "user" ? "user" : "assistant",
+    content: String(raw.content ?? ""),
+    toolLabel: raw.toolLabel
+      ? String(raw.toolLabel)
+      : raw.tool_label
+        ? String(raw.tool_label)
+        : undefined,
+    results,
+    createdAt: String(raw.createdAt ?? raw.created_at ?? new Date().toISOString()),
+  };
+}
 
 export async function listConversations(
   workspaceId: string,
 ): Promise<ConversationSummary[]> {
-  void workspaceId;
-  await mockDelay();
-  return CONVERSATIONS;
+  if (USE_MOCK) {
+    await mockDelay();
+    return CONVERSATIONS;
+  }
+  const raw = await apiRequest<Record<string, unknown>[]>(
+    "/conversations",
+    {},
+    { workspaceId },
+  );
+  return raw.map(mapConversation);
+}
+
+export async function createConversation(
+  workspaceId: string,
+  title = "新对话",
+  kind: ConversationSummary["kind"] = "chat",
+): Promise<ConversationSummary> {
+  if (USE_MOCK) {
+    await mockDelay(200);
+    const created: ConversationSummary = {
+      id: `c_${Date.now()}`,
+      title,
+      kind,
+      updatedAtLabel: "刚刚",
+      thumbTone: "a",
+    };
+    CONVERSATIONS.unshift(created);
+    return created;
+  }
+  const raw = await apiRequest<Record<string, unknown>>(
+    "/conversations",
+    {
+      method: "POST",
+      body: JSON.stringify({ title, kind }),
+    },
+    { workspaceId },
+  );
+  return mapConversation(raw);
 }
 
 export async function getConversationMessages(
   conversationId: string,
+  workspaceId?: string,
 ): Promise<ChatMessage[]> {
-  await mockDelay(200);
-  return MESSAGES[conversationId] ?? [];
+  if (USE_MOCK) {
+    await mockDelay(200);
+    return MESSAGES[conversationId] ?? [];
+  }
+  const raw = await apiRequest<Record<string, unknown>[]>(
+    `/conversations/${conversationId}/messages`,
+    {},
+    workspaceId ? { workspaceId } : undefined,
+  );
+  return raw.map(mapMessage);
 }
 
+/** 发送消息：消费后端 SSE，完成后重新拉取完整消息列表。 */
 export async function sendMessage(
   conversationId: string,
   content: string,
+  workspaceId?: string,
 ): Promise<ChatMessage[]> {
-  await mockDelay(600);
-  const isGenerate = /生成|出图|视频|海报|封面/.test(content);
-  const userMsg: ChatMessage = {
-    id: `u_${Date.now()}`,
-    role: "user",
-    content,
-    createdAt: new Date().toISOString(),
-  };
-  const assistantMsg: ChatMessage = isGenerate
-    ? {
-        id: `a_${Date.now()}`,
-        role: "assistant",
-        content: "已根据你的描述完成一轮生成，结果已归档到资产中心（演示数据）。",
-        toolLabel: "text_to_image · 完成",
-        results: [
-          { id: "nr1", label: "新变体 A", tone: "a" },
-          { id: "nr2", label: "新变体 B", tone: "b" },
-        ],
-        createdAt: new Date().toISOString(),
-      }
-    : {
-        id: `a_${Date.now()}`,
-        role: "assistant",
-        content: `这是演示文本回复：已收到「${content.slice(0, 40)}」。后端接入 Pydantic AI Harness 后，将在此流式输出真实答案。`,
-        createdAt: new Date().toISOString(),
-      };
+  if (USE_MOCK) {
+    await mockDelay(600);
+    const isGenerate = /生成|出图|视频|海报|封面/.test(content);
+    const userMsg: ChatMessage = {
+      id: `u_${Date.now()}`,
+      role: "user",
+      content,
+      createdAt: new Date().toISOString(),
+    };
+    const assistantMsg: ChatMessage = isGenerate
+      ? {
+          id: `a_${Date.now()}`,
+          role: "assistant",
+          content: "已根据你的描述完成一轮生成，结果已归档到资产中心（演示数据）。",
+          toolLabel: "text_to_image · 完成",
+          results: [
+            { id: "nr1", label: "新变体 A", tone: "a" },
+            { id: "nr2", label: "新变体 B", tone: "b" },
+          ],
+          createdAt: new Date().toISOString(),
+        }
+      : {
+          id: `a_${Date.now()}`,
+          role: "assistant",
+          content: `这是演示文本回复：已收到「${content.slice(0, 40)}」。`,
+          createdAt: new Date().toISOString(),
+        };
+    const prev = MESSAGES[conversationId] ?? [];
+    const next = [...prev, userMsg, assistantMsg];
+    MESSAGES[conversationId] = next;
+    return next;
+  }
 
-  const prev = MESSAGES[conversationId] ?? [];
-  const next = [...prev, userMsg, assistantMsg];
-  MESSAGES[conversationId] = next;
-  return next;
+  const overrides = workspaceId ? { workspaceId } : undefined;
+  const response = await apiFetch(
+    `/conversations/${conversationId}/messages`,
+    {
+      method: "POST",
+      body: JSON.stringify({ content }),
+    },
+    overrides,
+  );
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || `发送失败 (${response.status})`);
+  }
+
+  // 读完 SSE，确保服务端落库完成后再拉历史
+  await response.text();
+  return getConversationMessages(conversationId, workspaceId);
 }

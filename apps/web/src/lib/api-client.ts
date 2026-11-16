@@ -47,14 +47,20 @@ export function getRequestContext(): RequestContext {
   return requestContext;
 }
 
-async function resolveAuth(): Promise<{
+export function getApiBaseUrl(): string {
+  return resolveApiBase();
+}
+
+async function resolveAuth(
+  overrides?: RequestContext,
+): Promise<{
   token?: string;
   tenantId?: string;
   workspaceId?: string;
 }> {
-  let token = requestContext.token;
-  let tenantId = requestContext.tenantId;
-  const workspaceId = requestContext.workspaceId;
+  let token = overrides?.token ?? requestContext.token;
+  let tenantId = overrides?.tenantId ?? requestContext.tenantId;
+  const workspaceId = overrides?.workspaceId ?? requestContext.workspaceId;
 
   if (typeof window !== "undefined") {
     token = token ?? localStorage.getItem("prism_access_token") ?? undefined;
@@ -73,20 +79,15 @@ async function resolveAuth(): Promise<{
   return { token, tenantId, workspaceId };
 }
 
-export async function apiRequest<T>(
-  path: string,
-  init: RequestInit = {},
-): Promise<T> {
-  if (USE_MOCK) {
-    throw new Error(`Mock mode: use feature APIs instead of apiRequest(${path})`);
-  }
-
-  const auth = await resolveAuth();
+async function buildHeaders(
+  init: RequestInit,
+  overrides?: RequestContext,
+): Promise<Headers> {
+  const auth = await resolveAuth(overrides);
   const headers = new Headers(init.headers);
   if (!headers.has("Content-Type") && init.body) {
     headers.set("Content-Type", "application/json");
   }
-
   if (auth.token) {
     headers.set("Authorization", `Bearer ${auth.token}`);
   }
@@ -96,12 +97,36 @@ export async function apiRequest<T>(
   if (auth.workspaceId) {
     headers.set("X-Workspace-Id", auth.workspaceId);
   }
+  return headers;
+}
 
-  const response = await fetch(`${resolveApiBase()}${path}`, {
+/** 底层 fetch（含鉴权头），用于 SSE 等非 JSON 响应。 */
+export async function apiFetch(
+  path: string,
+  init: RequestInit = {},
+  overrides?: RequestContext,
+): Promise<Response> {
+  if (USE_MOCK) {
+    throw new Error(`Mock mode: use feature APIs instead of apiFetch(${path})`);
+  }
+  const headers = await buildHeaders(init, overrides);
+  return fetch(`${resolveApiBase()}${path}`, {
     ...init,
     headers,
     cache: "no-store",
   });
+}
+
+export async function apiRequest<T>(
+  path: string,
+  init: RequestInit = {},
+  overrides?: RequestContext,
+): Promise<T> {
+  if (USE_MOCK) {
+    throw new Error(`Mock mode: use feature APIs instead of apiRequest(${path})`);
+  }
+
+  const response = await apiFetch(path, init, overrides);
 
   if (!response.ok) {
     const text = await response.text();

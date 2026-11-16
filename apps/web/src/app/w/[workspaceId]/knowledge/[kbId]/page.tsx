@@ -11,8 +11,8 @@ export default async function KnowledgeDetailPage({
 }) {
   const { workspaceId, kbId } = await params;
   const [knowledgeBase, initialHits] = await Promise.all([
-    getKnowledgeBase(kbId),
-    searchByImage(kbId),
+    getKnowledgeBase(kbId, workspaceId),
+    searchByImage(kbId, undefined, workspaceId),
   ]);
 
   return (

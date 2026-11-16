@@ -1,3 +1,4 @@
+import { apiRequest, USE_MOCK } from "@/lib/api-client";
 import { mockDelay } from "@/lib/mock-delay";
 import type { AssetItem, AssetKind } from "@/types/domain";
 
@@ -46,14 +47,33 @@ const ASSETS: AssetItem[] = [
   },
 ];
 
+function mapAsset(raw: Record<string, unknown>): AssetItem {
+  const tone = String(raw.tone ?? "a");
+  const kind = String(raw.kind) === "video" ? "video" : "image";
+  return {
+    id: String(raw.id),
+    name: String(raw.name),
+    kind,
+    meta: String(raw.meta ?? ""),
+    tone: tone as AssetItem["tone"],
+    url: raw.url ? String(raw.url) : undefined,
+  };
+}
+
 export async function listAssets(
   workspaceId: string,
   kind: AssetKind | "all" = "all",
 ): Promise<AssetItem[]> {
-  void workspaceId;
-  await mockDelay();
-  if (kind === "all") {
-    return ASSETS;
+  if (USE_MOCK) {
+    await mockDelay();
+    if (kind === "all") return ASSETS;
+    return ASSETS.filter((a) => a.kind === kind);
   }
-  return ASSETS.filter((a) => a.kind === kind);
+  const qs = kind === "all" ? "" : `?kind=${encodeURIComponent(kind)}`;
+  const raw = await apiRequest<Record<string, unknown>[]>(
+    `/assets${qs}`,
+    {},
+    { workspaceId },
+  );
+  return raw.map(mapAsset);
 }

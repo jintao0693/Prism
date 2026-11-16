@@ -9,6 +9,7 @@ import PageHeader from "@/components/ui/PageHeader";
 import MessageBubble from "@/features/chat/components/MessageBubble";
 import ChatComposer from "@/features/chat/components/ChatComposer";
 import {
+  createConversation,
   getConversationMessages,
   sendMessage,
 } from "@/features/chat";
@@ -30,6 +31,8 @@ export default function ChatWorkspace({
 }: ChatWorkspaceProps) {
   const router = useRouter();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
   const [pending, startTransition] = useTransition();
 
   const active = useMemo(
@@ -39,21 +42,54 @@ export default function ChatWorkspace({
 
   useEffect(() => {
     let cancelled = false;
+    setError(null);
     startTransition(() => {
-      void getConversationMessages(activeConversationId).then((data) => {
-        if (!cancelled) {
-          setMessages(data);
-        }
-      });
+      void getConversationMessages(activeConversationId, workspaceId)
+        .then((data) => {
+          if (!cancelled) setMessages(data);
+        })
+        .catch((err: unknown) => {
+          if (!cancelled) {
+            setError(err instanceof Error ? err.message : "加载对话失败");
+          }
+        });
     });
     return () => {
       cancelled = true;
     };
-  }, [activeConversationId]);
+  }, [activeConversationId, workspaceId]);
 
   async function handleSend(text: string) {
-    const next = await sendMessage(activeConversationId, text);
-    setMessages(next);
+    setError(null);
+    setSending(true);
+    const optimistic: ChatMessage = {
+      id: `local_u_${Date.now()}`,
+      role: "user",
+      content: text,
+      createdAt: new Date().toISOString(),
+    };
+    setMessages((prev) => [...prev, optimistic]);
+    try {
+      const next = await sendMessage(activeConversationId, text, workspaceId);
+      setMessages(next);
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "发送失败");
+      setMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function handleNewChat() {
+    setError(null);
+    try {
+      const created = await createConversation(workspaceId, "新对话");
+      router.push(routes.chatConversation(workspaceId, created.id));
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "新建对话失败");
+    }
   }
 
   return (
@@ -65,11 +101,18 @@ export default function ChatWorkspace({
             ? `${active.title} · 支持纯文本问答与生图/生视频`
             : "多轮迭代 · 自动归档到资产中心"
         }
-        actions={<Button variant="ghost">引用知识库</Button>}
+        actions={
+          <Button variant="ghost" onClick={() => void handleNewChat()}>
+            新建对话
+          </Button>
+        }
       />
 
       <div className={styles.layout}>
         <Panel className={styles.sessions}>
+          {conversations.length === 0 ? (
+            <p className={styles.hint}>暂无会话，点右上角新建。</p>
+          ) : null}
           {conversations.map((c) => (
             <Link
               key={c.id}
@@ -97,8 +140,10 @@ export default function ChatWorkspace({
             {messages.map((m) => (
               <MessageBubble key={m.id} message={m} />
             ))}
+            {sending ? <p className={styles.hint}>Prism 正在回复…</p> : null}
+            {error ? <p className={styles.error}>{error}</p> : null}
           </div>
-          <ChatComposer onSend={handleSend} />
+          <ChatComposer onSend={handleSend} disabled={sending} />
         </Panel>
       </div>
     </div>
