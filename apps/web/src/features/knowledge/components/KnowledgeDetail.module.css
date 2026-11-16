@@ -37,24 +37,36 @@
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
-.dropzone {
-  border: 1.5px dashed #c5ced9;
-  border-radius: 14px;
-  padding: 28px 16px;
-  text-align: center;
+.notice {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 14px;
   color: var(--muted);
   background: #fafbfc;
   margin-bottom: 14px;
-  font-size: 14px;
-  line-height: 1.6;
+  font-size: 13px;
+  line-height: 1.55;
 }
 
-.dropzone strong {
-  color: var(--accent);
+.notice strong {
+  color: var(--ink);
+  font-weight: 600;
 }
 
-.dropzone span {
-  font-size: 12px;
+.error {
+  margin: 0 0 10px;
+  color: #b42318;
+  font-size: 13px;
+}
+
+.emptyHits {
+  padding: 20px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.emptyHits p {
+  margin: 0;
 }
 
 .search {

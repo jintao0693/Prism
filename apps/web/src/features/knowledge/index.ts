@@ -1,5 +1,6 @@
 export {
   listKnowledgeBases,
+  createKnowledgeBase,
   getKnowledgeBase,
   searchByImage,
   searchByText,

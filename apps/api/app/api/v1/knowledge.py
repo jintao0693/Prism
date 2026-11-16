@@ -103,12 +103,28 @@ async def get_knowledge_base(
 ) -> KnowledgeBaseOut:
     """知识库详情。"""
     kb = await _get_kb_or_404(db, ctx, kb_id)
+    doc_count = await db.scalar(
+        select(func.count())
+        .select_from(KnowledgeItem)
+        .where(
+            KnowledgeItem.knowledge_base_id == kb.id,
+            KnowledgeItem.item_type == "document",
+        ),
+    )
+    img_count = await db.scalar(
+        select(func.count())
+        .select_from(KnowledgeItem)
+        .where(
+            KnowledgeItem.knowledge_base_id == kb.id,
+            KnowledgeItem.item_type == "image",
+        ),
+    )
     return KnowledgeBaseOut(
         id=kb.id,
         name=kb.name,
         description=kb.description,
-        documentCount=0,
-        imageCount=0,
+        documentCount=int(doc_count or 0),
+        imageCount=int(img_count or 0),
     )
 
 

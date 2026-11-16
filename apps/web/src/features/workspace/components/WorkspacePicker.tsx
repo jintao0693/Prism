@@ -22,7 +22,7 @@ export default function WorkspacePicker({
         <BrandMark />
         <div className={styles.topRight}>
           <span className={styles.tenant}>
-            {tenant.name} · 演示租户
+            {tenant.name}
           </span>
           <Avatar text={user.avatarText} />
         </div>

@@ -13,9 +13,10 @@ import {
   getConversationMessages,
   sendMessage,
 } from "@/features/chat";
+import { listKnowledgeBases } from "@/features/knowledge";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
-import type { ChatMessage, ConversationSummary } from "@/types/domain";
+import type { ChatMessage, ConversationSummary, KnowledgeBase } from "@/types/domain";
 import styles from "./ChatWorkspace.module.css";
 
 export interface ChatWorkspaceProps {
@@ -33,12 +34,29 @@ export default function ChatWorkspace({
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const [statusText, setStatusText] = useState<string | null>(null);
+  const [knowledgeBases, setKnowledgeBases] = useState<KnowledgeBase[]>([]);
+  const [selectedKbIds, setSelectedKbIds] = useState<string[]>([]);
   const [pending, startTransition] = useTransition();
 
   const active = useMemo(
     () => conversations.find((c) => c.id === activeConversationId),
     [conversations, activeConversationId],
   );
+
+  useEffect(() => {
+    let cancelled = false;
+    void listKnowledgeBases(workspaceId)
+      .then((bases) => {
+        if (!cancelled) setKnowledgeBases(bases);
+      })
+      .catch(() => {
+        if (!cancelled) setKnowledgeBases([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [workspaceId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -59,9 +77,16 @@ export default function ChatWorkspace({
     };
   }, [activeConversationId, workspaceId]);
 
+  function toggleKb(id: string) {
+    setSelectedKbIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+  }
+
   async function handleSend(text: string) {
     setError(null);
     setSending(true);
+    setStatusText("正在理解意图…");
     const optimistic: ChatMessage = {
       id: `local_u_${Date.now()}`,
       role: "user",
@@ -70,7 +95,11 @@ export default function ChatWorkspace({
     };
     setMessages((prev) => [...prev, optimistic]);
     try {
-      const next = await sendMessage(activeConversationId, text, workspaceId);
+      const next = await sendMessage(activeConversationId, text, {
+        workspaceId,
+        knowledgeBaseIds: selectedKbIds,
+        onProgress: (p) => setStatusText(p.status),
+      });
       setMessages(next);
       router.refresh();
     } catch (err) {
@@ -78,6 +107,7 @@ export default function ChatWorkspace({
       setMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
     } finally {
       setSending(false);
+      setStatusText(null);
     }
   }
 
@@ -98,8 +128,8 @@ export default function ChatWorkspace({
         title="创作对话"
         description={
           active
-            ? `${active.title} · 支持纯文本问答与生图/生视频`
-            : "多轮迭代 · 自动归档到资产中心"
+            ? `${active.title} · 文本问答 / 生图 / 生视频（自动识别意图）`
+            : "文本问答 / 生图 / 生视频（自动识别意图）"
         }
         actions={
           <Button variant="ghost" onClick={() => void handleNewChat()}>
@@ -133,6 +163,24 @@ export default function ChatWorkspace({
         </Panel>
 
         <Panel className={styles.pane}>
+          <div className={styles.kbBar}>
+            <span className={styles.kbLabel}>引用知识库</span>
+            {knowledgeBases.length === 0 ? (
+              <span className={styles.hint}>当前空间暂无知识库</span>
+            ) : (
+              knowledgeBases.map((kb) => (
+                <label key={kb.id} className={styles.kbChip}>
+                  <input
+                    type="checkbox"
+                    checked={selectedKbIds.includes(kb.id)}
+                    onChange={() => toggleKb(kb.id)}
+                    disabled={sending}
+                  />
+                  {kb.name}
+                </label>
+              ))
+            )}
+          </div>
           <div className={styles.messages}>
             {pending && messages.length === 0 ? (
               <p className={styles.hint}>加载对话…</p>
@@ -140,10 +188,16 @@ export default function ChatWorkspace({
             {messages.map((m) => (
               <MessageBubble key={m.id} message={m} />
             ))}
-            {sending ? <p className={styles.hint}>Prism 正在回复…</p> : null}
+            {sending && statusText ? (
+              <p className={styles.hint}>{statusText}</p>
+            ) : null}
             {error ? <p className={styles.error}>{error}</p> : null}
           </div>
-          <ChatComposer onSend={handleSend} disabled={sending} />
+          <ChatComposer
+            onSend={handleSend}
+            disabled={sending}
+            statusText={sending ? statusText : null}
+          />
         </Panel>
       </div>
     </div>

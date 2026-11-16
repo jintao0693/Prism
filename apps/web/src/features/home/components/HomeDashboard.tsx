@@ -20,17 +20,18 @@ export default function HomeDashboard({
       <section className={styles.hero}>
         <h2>今天创作什么？</h2>
         <p>
-          用自然语言描述画面或镜头，Prism 会调度生图 / 生视频，并可引用当前空间知识库。
+          对话里直接描述需求：Prism 会自动识别意图，走文本问答、生图或生视频。
+          知识库目前支持文本检索 / 以文搜图；上传文件与真·以图搜图还在补。
         </p>
         <div className={styles.quickRow}>
           <Link className={styles.quick} href={routes.chat(workspaceId)}>
-            生成小红书封面
-          </Link>
-          <Link className={styles.quick} href={routes.chat(workspaceId)}>
-            图生 15 秒种草视频
+            去创作对话
           </Link>
           <Link className={styles.quick} href={routes.knowledge(workspaceId)}>
-            以图搜历史素材
+            打开知识库检索
+          </Link>
+          <Link className={styles.quick} href={routes.assets(workspaceId)}>
+            查看资产中心
           </Link>
         </div>
       </section>
@@ -42,6 +43,9 @@ export default function HomeDashboard({
             <Link href={routes.chat(workspaceId)}>查看全部</Link>
           </div>
           <div className={styles.list}>
+            {conversations.length === 0 ? (
+              <p className={styles.empty}>还没有对话，去创作一句话试试。</p>
+            ) : null}
             {conversations.map((c) => (
               <Link
                 key={c.id}
@@ -52,7 +56,12 @@ export default function HomeDashboard({
                 <span>
                   <strong>{c.title}</strong>
                   <span className={styles.meta}>
-                    {c.kind === "video" ? "生视频" : "生图"} · {c.updatedAtLabel}
+                    {c.kind === "video"
+                      ? "视频会话"
+                      : c.kind === "image"
+                        ? "图片会话"
+                        : "对话"}{" "}
+                    · {c.updatedAtLabel}
                   </span>
                 </span>
               </Link>
@@ -66,6 +75,9 @@ export default function HomeDashboard({
             <Link href={routes.assets(workspaceId)}>资产中心</Link>
           </div>
           <div className={styles.list}>
+            {assets.length === 0 ? (
+              <p className={styles.empty}>生成图/视频后会出现在这里。</p>
+            ) : null}
             {assets.slice(0, 3).map((a) => (
               <div key={a.id} className={styles.row}>
                 <span className={`thumb-${a.tone} ${styles.thumb}`} />

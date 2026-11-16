@@ -44,7 +44,11 @@ export default function AssetGallery({
       <PageHeader
         title="资产中心"
         description="当前工作空间内的生成与上传素材"
-        actions={<Button variant="ghost">上传</Button>}
+        actions={
+          <Button variant="ghost" disabled title="本地上传入口即将开放">
+            上传 · 即将支持
+          </Button>
+        }
       />
 
       <div className={styles.filters}>

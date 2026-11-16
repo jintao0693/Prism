@@ -64,6 +64,34 @@ function mapHit(raw: Record<string, unknown>): KnowledgeHit {
   };
 }
 
+export async function createKnowledgeBase(
+  workspaceId: string,
+  name: string,
+  description = "",
+): Promise<KnowledgeBase> {
+  if (USE_MOCK) {
+    await mockDelay(200);
+    const created: KnowledgeBase = {
+      id: `kb_${Date.now()}`,
+      name,
+      description,
+      documentCount: 0,
+      imageCount: 0,
+    };
+    BASES.unshift(created);
+    return created;
+  }
+  const raw = await apiRequest<Record<string, unknown>>(
+    "/knowledge-bases",
+    {
+      method: "POST",
+      body: JSON.stringify({ name, description }),
+    },
+    { workspaceId },
+  );
+  return mapKb(raw);
+}
+
 export async function listKnowledgeBases(
   workspaceId: string,
 ): Promise<KnowledgeBase[]> {
