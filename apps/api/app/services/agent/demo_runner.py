@@ -1,14 +1,14 @@
-"""Agent 运行器：优先火山对话/生成；否则本地演示。"""
+"""Agent 运行器：意图识别 → 对话 / 生图 / 生视频 / 知识库。"""
 
 from __future__ import annotations
 
-import re
 from collections.abc import AsyncIterator
 from typing import Any
 
 from app.models.asset import Asset
 from app.services.agent.deps import PrismDeps
 from app.services.agent.instructions import PRISM_SYSTEM_INSTRUCTIONS
+from app.services.agent.intent import classify_intent
 from app.services.knowledge.search_text import search_text
 from app.services.providers.volcengine.client import VolcengineArkClient
 
@@ -20,11 +20,19 @@ async def run_demo_agent(
     ark: VolcengineArkClient | None = None,
 ) -> AsyncIterator[dict[str, Any]]:
     """产出与 SSE 对齐的事件。"""
-    wants_image = bool(re.search(r"生成|出图|海报|封面|主视觉|画一张|做.*图", user_text))
-    wants_video = bool(re.search(r"视频|短片|分镜|出片", user_text))
+    has_knowledge = bool(deps.knowledge_base_ids)
+    intent, intent_source = await classify_intent(
+        user_text,
+        ark=ark,
+        has_knowledge=has_knowledge,
+    )
+    yield {
+        "type": "intent.resolved",
+        "data": {"intent": intent, "source": intent_source},
+    }
 
     # 知识库问答
-    if deps.knowledge_base_ids and re.search(r"主色|规范|是什么|什么色|根据知识库", user_text):
+    if intent == "knowledge" and has_knowledge:
         yield {"type": "tool.start", "data": {"name": "kb_search_text"}}
         snippets: list[str] = []
         for kb_id in deps.knowledge_base_ids:
@@ -57,7 +65,7 @@ async def run_demo_agent(
         yield {"type": "message.done", "data": {"content": answer, "results": []}}
         return
 
-    if wants_image:
+    if intent == "image":
         yield {"type": "tool.start", "data": {"name": "text_to_image"}}
         asset_id, result, key = await deps.media.generate_image(
             tenant_id=deps.tenant_id,
@@ -94,7 +102,7 @@ async def run_demo_agent(
         }
         return
 
-    if wants_video:
+    if intent == "video":
         yield {"type": "tool.start", "data": {"name": "text_to_video"}}
         asset_id, result, key = await deps.media.generate_video(
             tenant_id=deps.tenant_id,
