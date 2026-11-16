@@ -1,7 +1,8 @@
+import { Suspense } from "react";
 import ChatWorkspace from "@/features/chat/components/ChatWorkspace";
 import { listConversations } from "@/features/chat";
 
-export default async function ChatConversationPage({
+export default async function ConversationPage({
   params,
 }: {
   params: Promise<{ workspaceId: string; conversationId: string }>;
@@ -10,10 +11,12 @@ export default async function ChatConversationPage({
   const conversations = await listConversations(workspaceId);
 
   return (
-    <ChatWorkspace
-      workspaceId={workspaceId}
-      conversations={conversations}
-      activeConversationId={conversationId}
-    />
+    <Suspense fallback={<p style={{ padding: 24 }}>加载对话…</p>}>
+      <ChatWorkspace
+        workspaceId={workspaceId}
+        conversations={conversations}
+        activeConversationId={conversationId}
+      />
+    </Suspense>
   );
 }

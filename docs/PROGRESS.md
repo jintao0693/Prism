@@ -86,14 +86,16 @@
 
 ### 多模态 Agent 下一步优化
 
-1. ~~对话内上传参考图 → i2i / i2v~~（Composer 附参考图 + `referenceAssetIds` + `/assets/upload`）  
-2. ~~前端真流式气泡~~（SSE 增量渲染助手气泡 / 进度 / 中途结果卡）  
-3. ~~错误与空状态~~（对话 / 资产中心可读错误与空引导）  
-4. 方舟原生 function call 多步规划（替换意图+规则选工具）  
-5. Chat Ark `stream=true` 真 token 增量（前端已可吃 delta）  
-6. Seedream/Seedance 提示词编译器（品牌色/比例/时长/负面词）  
-7. 视频异步 Job + Worker（HTTP 只订阅进度）  
-8. 资产中心选历史图「送回对话」作参考  
+1. ~~对话内上传参考图 → i2i / i2v~~  
+2. ~~前端真流式气泡~~  
+3. ~~错误与空状态~~  
+4. ~~素材缩略图预览~~  
+5. ~~用量按生成资产实算~~（侧栏 / 设置；上传不计）  
+6. ~~资产中心「送回对话」~~  
+7. 方舟原生 function call 多步规划  
+8. Chat Ark `stream=true` 真 token 增量  
+9. Seedream/Seedance 提示词编译器  
+10. 视频异步 Job + Worker  
 
 ### Next（Phase 2 前）
 

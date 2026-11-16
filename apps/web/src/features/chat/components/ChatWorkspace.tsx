@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Panel from "@/components/ui/Panel";
 import Button from "@/components/ui/Button";
 import PageHeader from "@/components/ui/PageHeader";
@@ -13,9 +13,13 @@ import {
   getConversationMessages,
   sendMessage,
 } from "@/features/chat";
-import { uploadAsset } from "@/features/assets";
+import { listAssets, uploadAsset } from "@/features/assets";
 import { listKnowledgeBases } from "@/features/knowledge";
 import { cn } from "@/lib/cn";
+import {
+  takePendingReferences,
+  type PendingReferenceAsset,
+} from "@/lib/pending-refs";
 import { routes } from "@/lib/routes";
 import type {
   ChatMessage,
@@ -37,12 +41,14 @@ export default function ChatWorkspace({
   activeConversationId,
 }: ChatWorkspaceProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [statusText, setStatusText] = useState<string | null>(null);
   const [knowledgeBases, setKnowledgeBases] = useState<KnowledgeBase[]>([]);
   const [selectedKbIds, setSelectedKbIds] = useState<string[]>([]);
+  const [pendingRefs, setPendingRefs] = useState<PendingReferenceAsset[]>([]);
   const [pending, startTransition] = useTransition();
 
   const active = useMemo(
@@ -82,6 +88,58 @@ export default function ChatWorkspace({
       cancelled = true;
     };
   }, [activeConversationId, workspaceId]);
+
+  // 资产中心「送回对话」：query + sessionStorage
+  useEffect(() => {
+    let cancelled = false;
+    const fromQuery = (searchParams.get("referenceAssetIds") || "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .slice(0, 4);
+    const fromStore = takePendingReferences(workspaceId);
+    const idSet = new Set<string>([
+      ...fromQuery,
+      ...fromStore.map((a) => a.id),
+    ]);
+    if (!idSet.size) return;
+
+    void (async () => {
+      const byId = new Map(fromStore.map((a) => [a.id, a]));
+      const missing = [...idSet].filter((id) => !byId.has(id));
+      if (missing.length) {
+        try {
+          const all = await listAssets(workspaceId, "image");
+          for (const asset of all) {
+            if (idSet.has(asset.id)) {
+              byId.set(asset.id, {
+                id: asset.id,
+                name: asset.name,
+                thumbUrl: asset.thumbUrl || asset.url,
+                url: asset.url,
+              });
+            }
+          }
+        } catch {
+          // keep what we have
+        }
+      }
+      if (cancelled) return;
+      const next = [...idSet]
+        .map((id) => byId.get(id))
+        .filter(Boolean) as PendingReferenceAsset[];
+      if (next.length) setPendingRefs(next);
+      if (fromQuery.length) {
+        router.replace(
+          routes.chatConversation(workspaceId, activeConversationId),
+        );
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [workspaceId, activeConversationId, searchParams, router]);
 
   function toggleKb(id: string) {
     setSelectedKbIds((prev) =>
@@ -123,6 +181,13 @@ export default function ChatWorkspace({
     setSending(true);
     setStatusText(files.length ? "正在上传参考图…" : "正在理解意图…");
 
+    const galleryPreviews: GenerationResult[] = pendingRefs.map((ref) => ({
+      id: ref.id,
+      label: "参考图",
+      tone: "d",
+      kind: "image",
+      url: ref.thumbUrl || ref.url,
+    }));
     const localPreviews: GenerationResult[] = files.map((file, i) => ({
       id: `local_ref_${i}`,
       label: "参考图",
@@ -130,12 +195,13 @@ export default function ChatWorkspace({
       kind: "image",
       url: URL.createObjectURL(file),
     }));
+    const allPreviews = [...galleryPreviews, ...localPreviews];
 
     const optimistic: ChatMessage = {
       id: `local_u_${Date.now()}`,
       role: "user",
       content: text,
-      results: localPreviews.length ? localPreviews : undefined,
+      results: allPreviews.length ? allPreviews : undefined,
       createdAt: new Date().toISOString(),
     };
     setMessages((prev) => [
@@ -143,8 +209,10 @@ export default function ChatWorkspace({
       optimistic,
     ]);
 
+    const galleryIds = pendingRefs.map((r) => r.id);
+
     try {
-      const referenceAssetIds: string[] = [];
+      const referenceAssetIds: string[] = [...galleryIds];
       for (const file of files) {
         const uploaded = await uploadAsset(workspaceId, file, {
           conversationId: activeConversationId,
@@ -173,6 +241,7 @@ export default function ChatWorkspace({
           }
         },
       });
+      setPendingRefs([]);
       setMessages(next);
       router.refresh();
     } catch (err) {
@@ -269,6 +338,31 @@ export default function ChatWorkspace({
               ))
             )}
           </div>
+          {pendingRefs.length > 0 ? (
+            <div className={styles.refBar}>
+              <span className={styles.kbLabel}>待发送参考图</span>
+              {pendingRefs.map((ref) => (
+                <div key={ref.id} className={styles.refChip}>
+                  {ref.thumbUrl || ref.url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={ref.thumbUrl || ref.url} alt={ref.name} />
+                  ) : null}
+                  <span>{ref.name}</span>
+                  <button
+                    type="button"
+                    disabled={sending}
+                    onClick={() =>
+                      setPendingRefs((prev) =>
+                        prev.filter((x) => x.id !== ref.id),
+                      )
+                    }
+                  >
+                    移除
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : null}
           <div className={styles.messages}>
             {pending && messages.length === 0 ? (
               <p className={styles.hint}>加载对话…</p>
@@ -277,8 +371,7 @@ export default function ChatWorkspace({
               <div className={styles.emptyBox}>
                 <strong>从一句需求开始</strong>
                 <p>
-                  例如：「按参考图做商店页头图，再偏暖一点」或「根据知识库写发行
-                  brief」。也可以先点下方「附参考图」。
+                  例如：「按参考图做商店页头图，再偏暖一点」。也可从资产中心点「送回对话」。
                 </p>
               </div>
             ) : null}

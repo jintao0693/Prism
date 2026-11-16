@@ -86,6 +86,19 @@ async def resolve_last_image_asset(
     return None
 
 
+def is_referenceable_image(asset: Asset) -> bool:
+    """图片资产，或视频条目但文件实际是海报图。"""
+    if asset.is_deleted or not asset.storage_key:
+        return False
+    if asset.kind == "image":
+        return True
+    mime = (asset.mime_type or "").lower()
+    key = asset.storage_key.lower()
+    if mime.startswith("image/"):
+        return True
+    return key.endswith((".png", ".jpg", ".jpeg", ".webp", ".gif"))
+
+
 async def resolve_reference_image(
     session: AsyncSession,
     *,
@@ -102,9 +115,7 @@ async def resolve_reference_image(
             asset
             and asset.tenant_id == tenant_id
             and asset.workspace_id == workspace_id
-            and not asset.is_deleted
-            and asset.kind == "image"
-            and asset.storage_key
+            and is_referenceable_image(asset)
         ):
             return asset
     return None

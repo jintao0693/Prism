@@ -25,6 +25,7 @@ from app.schemas.conversation import (
     GenerationResultOut,
     SendMessageRequest,
 )
+from app.services.agent.asset_memory import is_referenceable_image
 from app.services.agent.compact import (
     apply_usage_to_conversation,
     compact_conversation,
@@ -200,8 +201,7 @@ async def send_message(
                 not asset
                 or asset.tenant_id != ctx.tenant_id
                 or asset.workspace_id != ctx.workspace_id
-                or asset.is_deleted
-                or asset.kind != "image"
+                or not is_referenceable_image(asset)
             ):
                 raise HTTPException(status_code=400, detail=f"参考图不可用：{asset_id}")
             if not asset.source_conversation_id:

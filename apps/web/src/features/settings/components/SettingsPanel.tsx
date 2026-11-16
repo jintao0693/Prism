@@ -10,12 +10,15 @@ import {
   updateVolcengineConfig,
 } from "@/features/settings/api/settingsApi";
 import type { VolcengineProviderConfig } from "@/features/settings/types";
+import { getUsageSummary } from "@/features/workspace/api/workspaceApi";
 import { loadStoredAuth } from "@/features/auth";
 import { USE_MOCK } from "@/lib/api-client";
+import type { UsageSummary } from "@/types/domain";
 import styles from "./SettingsPanel.module.css";
 
 export default function SettingsPanel() {
   const [config, setConfig] = useState<VolcengineProviderConfig | null>(null);
+  const [usage, setUsage] = useState<UsageSummary | null>(null);
   const [apiKey, setApiKey] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -26,6 +29,9 @@ export default function SettingsPanel() {
       void getVolcengineConfig()
         .then(setConfig)
         .catch((err: Error) => setMessage(err.message));
+      void getUsageSummary()
+        .then(setUsage)
+        .catch(() => setUsage(null));
     });
   }, []);
 
@@ -177,7 +183,17 @@ export default function SettingsPanel() {
 
         <section>
           <h3>用量</h3>
-          <p>本月配额与剩余次数（计费后置）。</p>
+          {usage ? (
+            <p>
+              本月已生成 <strong>{usage.imagesThisMonth}</strong> 张图 ·{" "}
+              <strong>{usage.videosThisMonth}</strong> 条视频
+              <span className={styles.hint}>
+                （按生成资产实算，上传参考图不计入；计费与上限后置）
+              </span>
+            </p>
+          ) : (
+            <p className={styles.hint}>用量加载中…</p>
+          )}
         </section>
       </Panel>
     </div>

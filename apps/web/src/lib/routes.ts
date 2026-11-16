@@ -3,8 +3,16 @@ export const routes = {
   workspaces: "/workspaces",
   workspaceHome: (workspaceId: string) => `/w/${workspaceId}`,
   chat: (workspaceId: string) => `/w/${workspaceId}/chat`,
-  chatConversation: (workspaceId: string, conversationId: string) =>
-    `/w/${workspaceId}/chat/${conversationId}`,
+  chatConversation: (
+    workspaceId: string,
+    conversationId: string,
+    opts?: { referenceAssetIds?: string[] },
+  ) => {
+    const base = `/w/${workspaceId}/chat/${conversationId}`;
+    const ids = opts?.referenceAssetIds?.filter(Boolean) ?? [];
+    if (!ids.length) return base;
+    return `${base}?referenceAssetIds=${encodeURIComponent(ids.join(","))}`;
+  },
   knowledge: (workspaceId: string) => `/w/${workspaceId}/knowledge`,
   knowledgeDetail: (workspaceId: string, kbId: string) =>
     `/w/${workspaceId}/knowledge/${kbId}`,

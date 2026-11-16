@@ -1,11 +1,15 @@
 "use client";
 
 import { useMemo, useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import PageHeader from "@/components/ui/PageHeader";
 import Button from "@/components/ui/Button";
 import MediaPreview from "@/components/media/MediaPreview";
 import { listAssets, uploadAsset } from "@/features/assets";
+import { createConversation } from "@/features/chat";
+import { stashPendingReferences } from "@/lib/pending-refs";
 import { cn } from "@/lib/cn";
+import { routes } from "@/lib/routes";
 import type { AssetItem, AssetKind } from "@/types/domain";
 import styles from "./AssetGallery.module.css";
 
@@ -20,10 +24,13 @@ export default function AssetGallery({
   workspaceId,
   initialAssets,
 }: AssetGalleryProps) {
+  const router = useRouter();
   const [filter, setFilter] = useState<Filter>("all");
   const [assets, setAssets] = useState(initialAssets);
   const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [sendingId, setSendingId] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -72,11 +79,47 @@ export default function AssetGallery({
     }
   }
 
+  async function sendToChat(asset: AssetItem) {
+    const ok =
+      asset.kind === "image" || asset.previewKind === "poster";
+    if (!ok || asset.previewKind === "video") {
+      setError("仅图片可送回对话作参考（视频请先导出静帧或用海报图）");
+      return;
+    }
+    setError(null);
+    setStatus(null);
+    setSendingId(asset.id);
+    try {
+      stashPendingReferences(workspaceId, [
+        {
+          id: asset.id,
+          name: asset.name,
+          thumbUrl: asset.thumbUrl || asset.url,
+          url: asset.url,
+        },
+      ]);
+      const created = await createConversation(
+        workspaceId,
+        `参考 · ${asset.name.slice(0, 24)}`,
+      );
+      router.push(
+        routes.chatConversation(workspaceId, created.id, {
+          referenceAssetIds: [asset.id],
+        }),
+      );
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "送回对话失败");
+    } finally {
+      setSendingId(null);
+    }
+  }
+
   return (
     <div className="page-enter">
       <PageHeader
         title="资产中心"
-        description="生成结果与上传参考图统一归档；列表使用缩略图，避免直接加载 2K 原图"
+        description="生成结果与上传参考图统一归档；可一键送回对话做图生图 / 图生视频"
         actions={
           <>
             <input
@@ -119,6 +162,7 @@ export default function AssetGallery({
           {error}
         </p>
       ) : null}
+      {status ? <p className={styles.status}>{status}</p> : null}
 
       <div className={cn(styles.grid, pending && styles.pending)}>
         {assets.length === 0 ? (
@@ -129,36 +173,52 @@ export default function AssetGallery({
             </p>
           </div>
         ) : null}
-        {assets.map((asset) => (
-          <article key={asset.id} className={styles.asset}>
-            <div className={styles.mediaWrap}>
-              {asset.url || asset.thumbUrl ? (
-                <MediaPreview
-                  url={asset.url}
-                  thumbUrl={asset.thumbUrl}
-                  kind={asset.kind}
-                  previewKind={asset.previewKind}
-                  mimeType={asset.mimeType}
-                  alt={asset.name}
-                  className={styles.mediaImg}
-                  preferThumb
-                  controls={asset.previewKind === "video"}
-                />
-              ) : (
-                <div className={cn(styles.media, `thumb-${asset.tone}`)} />
-              )}
-              {asset.kind === "video" ? (
-                <span className={styles.badge}>
-                  {asset.previewKind === "poster" ? "视频海报" : "视频"}
-                </span>
-              ) : null}
-            </div>
-            <div className={styles.cap}>
-              <strong>{asset.name}</strong>
-              <span>{asset.meta}</span>
-            </div>
-          </article>
-        ))}
+        {assets.map((asset) => {
+          const canSend =
+            asset.kind === "image" || asset.previewKind === "poster";
+          return (
+            <article key={asset.id} className={styles.asset}>
+              <div className={styles.mediaWrap}>
+                {asset.url || asset.thumbUrl ? (
+                  <MediaPreview
+                    url={asset.url}
+                    thumbUrl={asset.thumbUrl}
+                    kind={asset.kind}
+                    previewKind={asset.previewKind}
+                    mimeType={asset.mimeType}
+                    alt={asset.name}
+                    className={styles.mediaImg}
+                    preferThumb
+                    controls={asset.previewKind === "video"}
+                  />
+                ) : (
+                  <div className={cn(styles.media, `thumb-${asset.tone}`)} />
+                )}
+                {asset.kind === "video" ? (
+                  <span className={styles.badge}>
+                    {asset.previewKind === "poster" ? "视频海报" : "视频"}
+                  </span>
+                ) : null}
+              </div>
+              <div className={styles.cap}>
+                <strong>{asset.name}</strong>
+                <span>{asset.meta}</span>
+                {canSend ? (
+                  <button
+                    type="button"
+                    className={styles.sendBtn}
+                    disabled={sendingId === asset.id}
+                    onClick={() => void sendToChat(asset)}
+                  >
+                    {sendingId === asset.id ? "跳转中…" : "送回对话"}
+                  </button>
+                ) : (
+                  <span className={styles.sendHint}>视频请用静帧作参考</span>
+                )}
+              </div>
+            </article>
+          );
+        })}
       </div>
     </div>
   );

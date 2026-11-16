@@ -1,15 +1,11 @@
 """设置与用量、火山模型配置。"""
 
-from datetime import UTC, datetime
-
 from fastapi import APIRouter, Depends
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import RequestContext, get_current_context
 from app.core.config import get_settings
 from app.core.db import get_db
-from app.models.quota import QuotaUsage
 from app.schemas.common import UsageSummaryOut
 from app.schemas.settings import (
     ProviderTestResult,
@@ -23,6 +19,7 @@ from app.services.providers.registry import (
     to_snapshot,
 )
 from app.services.providers.volcengine.client import VolcengineArkError
+from app.services.quota.usage import sync_quota_usage
 
 router = APIRouter(prefix="/settings", tags=["设置"])
 
@@ -47,17 +44,12 @@ async def usage_summary(
     ctx: RequestContext = Depends(get_current_context),
     db: AsyncSession = Depends(get_db),
 ) -> UsageSummaryOut:
-    """本月用量。"""
-    ym = datetime.now(tz=UTC).strftime("%Y-%m")
-    row = await db.scalar(
-        select(QuotaUsage).where(
-            QuotaUsage.tenant_id == ctx.tenant_id,
-            QuotaUsage.year_month == ym,
-        ),
-    )
+    """本月用量（按生成资产实算，排除上传与种子画廊）。"""
+    row = await sync_quota_usage(db, ctx.tenant_id)
+    await db.commit()
     return UsageSummaryOut(
-        imagesThisMonth=row.images_count if row else 0,
-        videosThisMonth=row.videos_count if row else 0,
+        imagesThisMonth=row.images_count,
+        videosThisMonth=row.videos_count,
     )
 
 

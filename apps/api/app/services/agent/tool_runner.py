@@ -286,6 +286,9 @@ async def _run_image_tool(
     }
     deps.generated_assets.append(card)
     await deps.db.flush()
+    from app.services.quota.usage import record_media_generation
+
+    await record_media_generation(deps.db, deps.tenant_id, kind="image")
     yield {
         "type": "tool.result",
         "data": {
@@ -409,6 +412,9 @@ async def _run_video_tool(
     }
     deps.generated_assets.append(card)
     await deps.db.flush()
+    from app.services.quota.usage import record_media_generation
+
+    await record_media_generation(deps.db, deps.tenant_id, kind="video")
     yield {
         "type": "tool.result",
         "data": {

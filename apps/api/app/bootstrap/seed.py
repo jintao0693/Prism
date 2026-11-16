@@ -209,8 +209,8 @@ async def seed_demo_data(session: AsyncSession) -> None:
         id=str(uuid.uuid4()),
         tenant_id=TENANT_ID,
         year_month=ym,
-        images_count=128,
-        videos_count=14,
+        images_count=0,
+        videos_count=0,
     )
 
     session.add_all(

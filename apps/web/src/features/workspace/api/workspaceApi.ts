@@ -24,8 +24,8 @@ const WORKSPACES: Workspace[] = [
 ];
 
 const USAGE: UsageSummary = {
-  imagesThisMonth: 128,
-  videosThisMonth: 14,
+  imagesThisMonth: 0,
+  videosThisMonth: 0,
 };
 
 function mapWorkspace(raw: Record<string, unknown>): Workspace {
