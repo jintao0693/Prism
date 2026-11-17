@@ -18,6 +18,7 @@ DEFAULT_VOLCENGINE = {
     "base_url": "https://ark.cn-beijing.volces.com/api/v3",
     "chat_model": "doubao-seed-1-6-251015",
     "image_model": "doubao-seedream-4-0-250828",
+    # Seedance 2.0+ 支持多模态参考生视频与最长约 15s；请换成控制台已开通的 Model ID
     "video_model": "doubao-seedance-1-0-pro-250528",
     "embedding_model": "doubao-embedding-vision-250615",
 }

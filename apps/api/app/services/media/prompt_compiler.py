@@ -60,10 +60,19 @@ def compile_media_prompt(
         parts.append(f"避免：{_IMAGE_NEGATIVES}。")
         extras["negatives"] = "image"
     else:
-        if "秒" not in text and "时长" not in text:
+        if "15" in text or "十五秒" in text:
+            parts.append("时长约 15 秒，分镜清晰，镜头缓慢推进，节奏克制。")
+            extras["duration"] = "15s"
+        elif "秒" not in text and "时长" not in text:
             parts.append("时长约 5 秒，镜头缓慢推进，节奏克制。")
             extras["duration"] = "5s"
-        if mode == "image_to_video":
+        if mode == "reference_to_video":
+            parts.append(
+                "综合多张参考图的角色外形、服装与场景气质生成连贯成片，"
+                "主体一致性优先，运镜优雅，避免跳切崩人设。",
+            )
+            extras["r2v"] = "multimodal_refs"
+        elif mode == "image_to_video":
             parts.append("严格承接首帧图气质与构图，环境轻微动态即可。")
             extras["i2v"] = "follow_first_frame"
         parts.append(f"避免：{_VIDEO_NEGATIVES}。")

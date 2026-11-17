@@ -36,84 +36,84 @@
 | 从零出一张主视觉 / 封面 / KV | 自然语言生图，结果进资产中心 |
 | 在上一张基础上改色、改氛围、保留构图 | 自动走图生图，并记下父子素材关系 |
 | 把定稿静帧做成短预告 | 图生视频，带任务进度 |
+| 多张分镜 / 定妆参考拉长预告 | Seedance 2.x **多模态参考生视频**（多图 `reference_image`，最长约 15s） |
 | 多团队共用、密钥隔离 | 租户 / 工作空间隔离；火山 Key 租户自配 |
 
 **下一阶段**：视频片段检索、社媒矩阵发布、巨量 / Meta 投放草稿 — 见 [ROADMAP.md](ROADMAP.md)。
 
 ---
 
-## 产品案例：发行组真正难的两件事
+## 产品案例：先看 15 秒，再看工作流
 
-随便出一个好看的二次元图不难。难的是：**改稿不断血、规范真的管事、同角色跨镜头不崩、静帧还能接着出预告**——而且这一切要能进资产库被评审追问「这张从哪来的」。
-
-下面用虚构手游 **《幻境：星落传说》** 讲两件高级作业。基础出图 / 出片联调见后文与 [docs/GAME_CASES.md](docs/GAME_CASES.md)。
+随便出一张二次元图不难。难的是：**多张分镜锁住同一角色 → 一口气拉出 15 秒发行预告 → 改稿与规范还能追溯**。  
+虚构手游 **《幻境：星落传说》**；完整记录见 [docs/GAME_CASES.md](docs/GAME_CASES.md)。
 
 ---
 
-### 高级案例 1 · 母版血缘树：一轮对话长出可审计的资产树
+### 明星案例 · 多模态参考 → 15 秒发行预告
 
 **难在哪**  
-普通生图工具给你的是一堆互不相关的 JPG。发行评审要问的是：初稿是谁？偏暖版挂在谁下面？预告片的首帧是哪一张定稿？有没有偷偷撞上禁用的霓虹紫？
+5 秒氛围片只能「推一下镜头」。发行周要的是能投商店 / 社媒的 **15 秒叙事预告**：开场立人设、中段给世界与动作、收束给希望感——而且主角脸和披风不能崩成三个人。
 
-**Prism 怎么做**
+**怎么做（多模态参考）**
 
-1. 勾选知识库：主色深空靛 / 星辉金、禁用高饱和霓虹紫  
-2. 同一会话：文生图母版 →「再偏暖，构图人物不动」图生图 →「做成 5 秒推进预告」图生视频  
-3. 每一步带 `parentAssetId` 血缘；规范不是事后 PDF，而是对话里的活约束
+1. 先连出多张分镜静帧（悬崖开场 / 星轨桥 / 肖像锁脸 / 遗迹 / 跃迁 / 终章提灯）  
+2. 把这些图作为 **多模态参考**（角色 + 场景 + 情绪，而不是只塞一张首帧）  
+3. 生成 **约 15 秒** 预告：缓推 + 环绕，深空靛 / 星辉金气质贯穿
 
-![母版 → 改稿 → 预告：可追溯血缘板](docs/media/cases/case-adv-lineage-board.jpg)
+**分镜参考板**
 
-| 联调真出 · 母版 | 联调真出 · 偏暖子稿 | 规范纠偏示意（左违规 / 右合规） |
-|---|---|---|
-| ![母版](docs/media/cases/case2-kv-v1.jpg) | ![偏暖](docs/media/cases/case2-kv-warm.jpg) | ![知识约束纠偏](docs/media/cases/case-adv-kb-guardrail.jpg) |
+| 开场 | 星轨桥 | 锁脸 | 遗迹 | 跃迁 | 终章 |
+|---|---|---|---|---|---|
+| ![cliff](docs/media/cases/sb-01-cliff.jpg) | ![bridge](docs/media/cases/sb-02-bridge.jpg) | ![portrait](docs/media/cases/sb-03-portrait.jpg) | ![ruins](docs/media/cases/sb-04-ruins.jpg) | ![leap](docs/media/cases/sb-06-leap.jpg) | ![finale](docs/media/cases/sb-05-finale.jpg) |
 
-预告成片（首帧挂在定稿上）：[下载 5 秒 MP4](docs/media/cases/case3-teaser.mp4)
+**成片（GitHub 可直接播放）**
+
+<video src="https://github.com/jintao0693/Prism/raw/main/docs/media/cases/case-adv-15s.mp4" controls muted playsinline preload="metadata" width="720">
+  若无法内嵌播放，请打开
+  <a href="docs/media/cases/case-adv-15s.mp4">docs/media/cases/case-adv-15s.mp4</a>
+</video>
+
+> 仓库内路径：[`docs/media/cases/case-adv-15s.mp4`](docs/media/cases/case-adv-15s.mp4)。产品侧已支持 Seedance 2.x 多模态参考生视频（多图 `reference_image`，最长约 15s）；设置页把视频模型换成控制台已开通的 Seedance 2.x Model ID 即可调用。
 
 **别人看完会想用的点**  
-不是「又能出一张图」，而是**创意迭代变成一棵树**：可回退、可对比、可追责、可接着做视频——这是工作流，不是玩具。
+不是「再出一张静帧」，而是 **分镜资产 → 多模态参考 → 可投放时长的成片**，这才是发行内容组愿意换工具的理由。
 
 ---
 
-### 高级案例 2 · 定妆锁角色：同旅人三叙事镜，挑一镜拉预告
+### 高级案例 · 母版血缘树（可审计，不是散装 JPG）
 
-**难在哪**  
-内容日历要同一周交「探索 / 战斗 / 城镇夜」三张叙事静帧 + 一条预告。外包三组最容易把主角脸和披风细节做成三个人。发行要的是：**先锁定妆，再铺镜头，再动起来**。
+同一会话：文生图母版 →「再偏暖」图生图 → 图生视频；每步带 `parentAssetId`。规范（深空靛 / 禁霓虹紫）是对话里的活约束。
 
-**Prism 怎么做**
+![母版血缘板](docs/media/cases/case-adv-lineage-board.jpg)
 
-1. 先出 / 上传定妆三视图，挂进会话当参考（角色锁）  
-2. 连续下达三镜 brief，始终「同一银发旅人、靛色披风、星辉金扣」  
-3. 选定探索镜做图生视频：缓慢推进 + 星尘，气质跟静帧连续
+| 联调母版 | 偏暖子稿 | 规范纠偏（左违规 / 右合规） |
+|---|---|---|
+| ![母版](docs/media/cases/case2-kv-v1.jpg) | ![偏暖](docs/media/cases/case2-kv-warm.jpg) | ![纠偏](docs/media/cases/case-adv-kb-guardrail.jpg) |
 
-![定妆锁：正 / 侧 / 背一致](docs/media/cases/case-adv-char-lock.jpg)
+早期 5 秒联调片：[case3-teaser.mp4](docs/media/cases/case3-teaser.mp4)
 
-| 探索镜 | 战斗镜 | 城镇夜镜 |
+---
+
+### 高级案例 · 定妆锁角色 → 三镜叙事板
+
+先锁定妆，再铺探索 / 战斗 / 城镇夜——避免外包把主角做成三个人；再挑一镜进预告链路。
+
+![定妆](docs/media/cases/case-adv-char-lock.jpg)
+
+| 探索 | 战斗 | 城镇夜 |
 |---|---|---|
 | ![探索](docs/media/cases/case-adv-scene-explore.jpg) | ![战斗](docs/media/cases/case-adv-scene-battle.jpg) | ![城镇](docs/media/cases/case-adv-scene-city.jpg) |
 
-**别人看完会想用的点**  
-这是 **IP 生产线**，不是单次灵感：定妆 → 多镜叙事板 → 跨模态预告，全在同一工作空间归档，下周活动还能从同一母版继续长。
-
 ---
 
-### 支撑能力（联调已通）
-
-这些高级作业站在已跑通的基础能力上：
-
-| 能力 | 你在产品里怎么用 | 素材 |
-|------|------------------|------|
-| 规范进知识库 | 勾选设定库追问主色 / 禁忌 | ![brief](docs/media/cases/case1-brand-brief.jpg) |
-| 文生图 → 图生图改稿 | 「再偏暖，保留构图」 | 见上表母版 / 子稿 |
-| 图生视频 | 定稿静帧拉 5 秒氛围预告 | [MP4](docs/media/cases/case3-teaser.mp4) |
-| 以图搜库 / 带回对话 | 历史 KV 召回后再创作 | 见 [GAME_CASES](docs/GAME_CASES.md) |
+### 整条生产线
 
 ```text
-知识库锁规范 + 定妆锁角色
-        → 母版 KV（文生图）
-        → 可追溯改稿（图生图 / parentAssetId）
-        → 三镜叙事板（同 IP）
-        → 选镜拉预告（图生视频）
-        → 全部进入资产中心，可供评审与复用
+知识库锁规范 + 定妆 / 分镜多图
+        → 母版 KV → 可追溯改稿（parentAssetId）
+        → 多模态参考 → 约 15 秒发行预告
+        → 全部进入资产中心，供评审与复用
 ```
 
 ---

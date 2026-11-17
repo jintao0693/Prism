@@ -4,7 +4,7 @@
 > 复现：`python scripts/run_game_cases.py`  
 > 产品叙事摘要已写入根 [README.md](../README.md)
 
-叙事分两层：**案例 1–3** 联调真出（规范 / KV 改稿 / 预告）；**高级案例 A–B** 讲发行组真正难的工作流（母版血缘树、定妆锁角色多镜板）。素材在 [`docs/media/cases/`](media/cases/)，对外摘要在根 [README.md](../README.md)。
+叙事分三层：**案例 1–3** 联调真出；**高级 A–B** 母版血缘 / 定妆多镜；**明星案例** 多模态参考 → 约 15 秒发行预告。素材在 [`docs/media/cases/`](media/cases/)，对外摘要在根 [README.md](../README.md)。
 
 | 文件 | 说明 |
 |------|------|
@@ -13,6 +13,8 @@
 | `case2-kv-warm.jpg` | 「再偏暖」图生图改稿 |
 | `case3-teaser-poster.jpg` | 预告关键静帧 |
 | `case3-teaser.mp4` | 5 秒图生视频成片 |
+| `sb-01-cliff.jpg` … `sb-06-leap.jpg` | 15s 预告分镜参考板 |
+| `case-adv-15s.mp4` | 约 15 秒多模态参考成片（README 内嵌可播） |
 | `case-adv-lineage-board.jpg` | 母版血缘板示意 |
 | `case-adv-kb-guardrail.jpg` | 规范纠偏（违规 vs 合规） |
 | `case-adv-char-lock.jpg` | 定妆三视图 |
@@ -105,6 +107,24 @@ KV 已定。还要 5 秒氛围预告给商店详情与社媒首发：缓慢推�
 ![预告关键静帧](media/cases/case3-teaser-poster.jpg)
 
 [下载 / 播放成片 MP4](media/cases/case3-teaser.mp4)
+
+---
+
+## 明星案例 · 多模态参考 → 约 15 秒发行预告
+
+### 业务背景
+
+发行周需要可投商店 / 社媒的 15 秒叙事预告：开场立人设、中段给世界与动作、收束给希望感；主角外形必须跨镜一致。
+
+### 用户动作
+
+1. 连出多张分镜静帧（开场 / 桥 / 肖像 / 遗迹 / 跃迁 / 终章）  
+2. 作为多模态 `reference_image` 输入（Seedance 2.x；与首帧模式互斥）  
+3. `duration=15` 拉成片，进资产中心
+
+<video src="https://github.com/jintao0693/Prism/raw/main/docs/media/cases/case-adv-15s.mp4" controls muted playsinline width="720"></video>
+
+API：`VolcengineMediaProvider.reference_to_video` / `VolcengineArkClient.create_video_task(..., reference_image_urls=...)`。
 
 ---
 

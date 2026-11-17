@@ -87,3 +87,37 @@ class VolcengineMediaProvider(MediaProvider):
             filename="volc_i2v.mp4",
             meta=f"volcengine image_to_video · {duration}s · {prompt[:40]}",
         )
+
+    async def reference_to_video(
+        self,
+        prompt: str,
+        *,
+        reference_images: list[bytes],
+        duration: int = 15,
+        ratio: str = "16:9",
+        resolution: str = "720p",
+        generate_audio: bool | None = True,
+        on_progress: ProgressCallback | None = None,
+    ) -> MediaResult:
+        """Seedance 2.0+ 多模态参考生视频（多张 reference_image，最长约 15s）。"""
+        refs = [_to_data_url(img) for img in reference_images[:9] if img]
+        if not refs:
+            raise ValueError("多模态参考生视频至少需要 1 张参考图")
+        data = await self.client.generate_video(
+            prompt,
+            duration=duration,
+            ratio=ratio,
+            resolution=resolution,
+            reference_image_urls=refs,
+            generate_audio=generate_audio,
+            on_progress=on_progress,
+        )
+        return MediaResult(
+            data=data,
+            mime_type="video/mp4",
+            filename="volc_ref2v.mp4",
+            meta=(
+                f"volcengine reference_to_video · {duration}s · "
+                f"{len(refs)} refs · {prompt[:40]}"
+            ),
+        )

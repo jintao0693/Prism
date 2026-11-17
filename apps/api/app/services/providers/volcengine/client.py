@@ -272,14 +272,56 @@ class VolcengineArkClient:
         ratio: str = "16:9",
         duration: int | None = 5,
         image_url: str | None = None,
+        last_frame_url: str | None = None,
+        reference_image_urls: list[str] | None = None,
+        generate_audio: bool | None = None,
+        resolution: str | None = None,
     ) -> str:
-        """创建视频任务，返回 task_id。"""
+        """创建视频任务，返回 task_id。
+
+        互斥模式（与方舟一致，不可混用）：
+        - 首帧 / 首尾帧：`image_url`（+ 可选 `last_frame_url`）
+        - 多模态参考生视频（Seedance 2.0+）：`reference_image_urls`（最多 9 张）
+        - 文生视频：仅文本
+        """
         model_id = model or self.video_model
         if not model_id:
             raise VolcengineArkError("未配置视频模型 ID（video_model）")
 
+        refs = [u for u in (reference_image_urls or []) if u][:9]
+        if refs and (image_url or last_frame_url):
+            raise VolcengineArkError(
+                "多模态参考图与首帧/首尾帧模式互斥，请只选一种",
+            )
+
         content: list[dict[str, Any]] = [{"type": "text", "text": prompt}]
-        if image_url:
+        if refs:
+            for url in refs:
+                content.append(
+                    {
+                        "type": "image_url",
+                        "role": "reference_image",
+                        "image_url": {"url": url},
+                    },
+                )
+        elif image_url and last_frame_url:
+            content.insert(
+                0,
+                {
+                    "type": "image_url",
+                    "role": "first_frame",
+                    "image_url": {"url": image_url},
+                },
+            )
+            content.insert(
+                1,
+                {
+                    "type": "image_url",
+                    "role": "last_frame",
+                    "image_url": {"url": last_frame_url},
+                },
+            )
+        elif image_url:
             content.insert(
                 0,
                 {"type": "image_url", "image_url": {"url": image_url}},
@@ -290,10 +332,15 @@ class VolcengineArkClient:
             "content": content,
         }
         # 首帧/首尾帧图生视频时，输出比例跟随首帧图，不可再传 ratio
-        if ratio and not image_url:
+        frame_locked = bool(image_url) and not refs
+        if ratio and not frame_locked:
             body["ratio"] = ratio
         if duration is not None:
             body["duration"] = duration
+        if resolution:
+            body["resolution"] = resolution
+        if generate_audio is not None:
+            body["generate_audio"] = generate_audio
 
         data = await self._request(
             "POST",
@@ -317,6 +364,10 @@ class VolcengineArkClient:
         ratio: str = "16:9",
         duration: int | None = 5,
         image_url: str | None = None,
+        last_frame_url: str | None = None,
+        reference_image_urls: list[str] | None = None,
+        generate_audio: bool | None = None,
+        resolution: str | None = None,
         poll_interval: float = 8.0,
         max_wait: float = 600.0,
         on_progress: Any | None = None,
@@ -328,6 +379,10 @@ class VolcengineArkClient:
             ratio=ratio,
             duration=duration,
             image_url=image_url,
+            last_frame_url=last_frame_url,
+            reference_image_urls=reference_image_urls,
+            generate_audio=generate_audio,
+            resolution=resolution,
         )
         logger.info("火山视频任务已创建: %s", task_id)
         if on_progress:
