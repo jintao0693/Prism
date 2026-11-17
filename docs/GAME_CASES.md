@@ -122,11 +122,8 @@ KV 已定。还要 5 秒氛围预告给商店详情与社媒首发：缓慢推�
 2. 作为多模态 `reference_image` 输入（Seedance 2.x；与首帧模式互斥）  
 3. `duration=15` 拉成片，进资产中心
 
-<p align="center">
-  <video width="720" controls muted playsinline preload="metadata">
-    <source src="https://cdn.jsdelivr.net/gh/jintao0693/Prism@main/docs/media/cases/case-adv-15s.mp4" type="video/mp4" />
-  </video>
-</p>
+https://github.com/user-attachments/assets/0bb9d578-d415-4eaa-8513-d5e5e5d0ce17
+
 
 API：`VolcengineMediaProvider.reference_to_video` / `VolcengineArkClient.create_video_task(..., reference_image_urls=...)`。
 
