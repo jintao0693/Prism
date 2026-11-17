@@ -43,6 +43,41 @@ from app.services.providers.registry import build_volcengine_client
 router = APIRouter(prefix="/conversations", tags=["对话"])
 
 
+async def _conversation_cover_thumbs(
+    db: AsyncSession,
+    *,
+    tenant_id: str,
+    workspace_id: str,
+    conversation_ids: list[str],
+) -> dict[str, str | None]:
+    """每个会话取最近一张图片资产的缩略图 URL。"""
+    if not conversation_ids:
+        return {}
+    from app.services.media.preview import asset_preview_fields
+
+    rows = (
+        await db.scalars(
+            select(Asset)
+            .where(
+                Asset.tenant_id == tenant_id,
+                Asset.workspace_id == workspace_id,
+                Asset.kind == "image",
+                Asset.is_deleted.is_(False),
+                Asset.source_conversation_id.in_(conversation_ids),
+            )
+            .order_by(Asset.created_at.desc()),
+        )
+    ).all()
+    thumbs: dict[str, str | None] = {}
+    for asset in rows:
+        cid = asset.source_conversation_id
+        if not cid or cid in thumbs:
+            continue
+        preview = asset_preview_fields(asset)
+        thumbs[cid] = preview.get("thumbUrl") or preview.get("url")
+    return thumbs
+
+
 async def _enrich_results(db: AsyncSession, raw: list) -> list[GenerationResultOut]:
     """用资产表补齐 url / thumbUrl，避免历史 JSON 缺预览或指向失效路径。"""
     from app.services.media.preview import asset_preview_fields
@@ -98,6 +133,12 @@ async def list_conversations(
     rows = (await db.scalars(stmt.order_by(Conversation.updated_at.desc()))).all()
 
     tones = ["a", "b", "c"]
+    covers = await _conversation_cover_thumbs(
+        db,
+        tenant_id=ctx.tenant_id,
+        workspace_id=ctx.workspace_id,
+        conversation_ids=[c.id for c in rows],
+    )
     out: list[ConversationSummaryOut] = []
     for i, c in enumerate(rows):
         out.append(
@@ -107,6 +148,7 @@ async def list_conversations(
                 kind=c.kind,
                 updatedAtLabel=c.updated_at.astimezone(UTC).strftime("%Y-%m-%d %H:%M"),
                 thumbTone=tones[i % 3],
+                thumbUrl=covers.get(c.id),
             ),
         )
     return out
@@ -317,7 +359,10 @@ async def send_message(
         include_summary_bridge=bool(conv.summary_text),
     )
 
-    media = await MediaGateway.for_tenant(db, ctx.tenant_id)
+    media = await MediaGateway.for_tenant(db, ctx.tenant_id, ctx.workspace_id)
+    media_opts = (
+        body.media_options.model_dump() if body.media_options is not None else {}
+    )
     deps = PrismDeps(
         tenant_id=ctx.tenant_id,
         workspace_id=ctx.workspace_id,
@@ -328,6 +373,7 @@ async def send_message(
         reference_asset_ids=ref_ids,
         history_messages=history,
         compact_generation=int(conv.compact_generation or 0),
+        media_options=media_opts,
     )
 
     async def event_stream():

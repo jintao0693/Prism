@@ -17,3 +17,5 @@ class Workspace(Base, TimestampMixin, TenantScopedMixin):
     description: Mapped[str] = mapped_column(Text, nullable=False, default="")
     # active | evergreen | archived
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="active")
+    # Brand Pack JSON（主色/禁忌/气质等）
+    brand_pack_json: Mapped[str] = mapped_column(Text, nullable=False, default="")

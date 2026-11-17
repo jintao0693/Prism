@@ -19,6 +19,8 @@ class Asset(Base, TimestampMixin, WorkspaceScopedMixin):
     storage_key: Mapped[str] = mapped_column(String(512), nullable=False, default="")
     mime_type: Mapped[str] = mapped_column(String(128), nullable=False, default="application/octet-stream")
     meta: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    # 视频海报（抽帧 JPEG 的 storage key）
+    poster_key: Mapped[str | None] = mapped_column(String(512), nullable=True, default=None)
     # 血缘（简版）
     source_conversation_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     source_job_id: Mapped[str | None] = mapped_column(String(64), nullable=True)

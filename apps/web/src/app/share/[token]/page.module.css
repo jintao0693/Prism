@@ -1,0 +1,47 @@
+.wrap {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  background: var(--canvas);
+}
+
+.card {
+  width: min(720px, 100%);
+  padding: 28px;
+}
+
+.eyebrow {
+  margin: 0 0 6px;
+  font-size: 12px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.card h1 {
+  margin: 0 0 12px;
+  font-size: 22px;
+}
+
+.note {
+  margin: 0 0 16px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.media {
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: #fff;
+}
+
+.preview {
+  width: 100%;
+  max-height: 70vh;
+  object-fit: contain;
+  display: block;
+}

@@ -19,7 +19,7 @@ export interface Workspace {
   id: string;
   name: string;
   description: string;
-  status: "active" | "evergreen";
+  status: "active" | "evergreen" | "archived";
   conversationCount: number;
   assetCount: number;
   updatedAtLabel: string;
@@ -31,6 +31,42 @@ export interface ConversationSummary {
   kind: "image" | "video" | "chat";
   updatedAtLabel: string;
   thumbTone: "a" | "b" | "c";
+  thumbUrl?: string;
+}
+
+export interface WorkspaceMember {
+  userId: string;
+  name: string;
+  email: string;
+  role: Role;
+  avatarText: string;
+}
+
+export interface BrandPack {
+  name: string;
+  primaryColor: string;
+  accentColor: string;
+  primaryColorName: string;
+  accentColorName: string;
+  keywords: string[];
+  forbidden: string[];
+  toneHint: string;
+}
+
+export interface MediaOptions {
+  size?: string;
+  ratio?: string;
+  seed?: number;
+  variants?: number;
+}
+
+export interface ShareLinkResult {
+  id: string;
+  token: string;
+  title: string;
+  resourceType: string;
+  resourceId: string;
+  sharePath: string;
 }
 
 export type MessageRole = "user" | "assistant";

@@ -8,6 +8,7 @@ import MediaPreview from "@/components/media/MediaPreview";
 import MediaLightbox from "@/components/media/MediaLightbox";
 import { listAssets, uploadAsset } from "@/features/assets";
 import { createConversation, listConversations } from "@/features/chat";
+import { createAssetShare } from "@/features/shares/api/sharesApi";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { stashPendingReferences } from "@/lib/pending-refs";
 import { cn } from "@/lib/cn";
@@ -33,6 +34,11 @@ export default function AssetGallery({
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<AssetItem | null>(null);
   const [sendTarget, setSendTarget] = useState<AssetItem | null>(null);
+  const [comparePair, setComparePair] = useState<{
+    parent: AssetItem;
+    current: AssetItem;
+  } | null>(null);
+  const [sharingId, setSharingId] = useState<string | null>(null);
   const highlightId = searchParams.get("highlight");
 
   useEffect(() => {
@@ -99,6 +105,42 @@ export default function AssetGallery({
       return;
     }
     setSendTarget(asset);
+  }
+
+  async function shareAsset(asset: AssetItem) {
+    setError(null);
+    setStatus(null);
+    setSharingId(asset.id);
+    try {
+      const link = await createAssetShare(workspaceId, asset.id, {
+        title: asset.name,
+      });
+      const path = link.sharePath || routes.share(link.token);
+      const url =
+        typeof window !== "undefined"
+          ? `${window.location.origin}${path}`
+          : path;
+      if (typeof navigator !== "undefined" && navigator.clipboard) {
+        await navigator.clipboard.writeText(url);
+        setStatus("分享链接已复制到剪贴板");
+      } else {
+        setStatus(`分享链接：${url}`);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "创建分享失败");
+    } finally {
+      setSharingId(null);
+    }
+  }
+
+  function openCompare(asset: AssetItem) {
+    if (!asset.parentAssetId) return;
+    const parent = assets.find((a) => a.id === asset.parentAssetId);
+    if (!parent) {
+      setError("找不到母版图，无法对比");
+      return;
+    }
+    setComparePair({ parent, current: asset });
   }
 
   async function sendToChat(asset: AssetItem, mode: "recent" | "new") {
@@ -257,18 +299,37 @@ export default function AssetGallery({
                 <strong>{asset.name}</strong>
                 <span>{asset.meta}</span>
                 {lineage ? <em className={styles.lineage}>{lineage}</em> : null}
-                {canSend ? (
+                <div className={styles.actionRow}>
                   <button
                     type="button"
                     className={styles.sendBtn}
-                    disabled={sendingId === asset.id}
-                    onClick={() => requestSendToChat(asset)}
+                    disabled={sharingId === asset.id}
+                    onClick={() => void shareAsset(asset)}
                   >
-                    {sendingId === asset.id ? "跳转中…" : "送回对话"}
+                    {sharingId === asset.id ? "生成中…" : "分享"}
                   </button>
-                ) : (
-                  <span className={styles.sendHint}>视频请用静帧作参考</span>
-                )}
+                  {asset.parentAssetId ? (
+                    <button
+                      type="button"
+                      className={styles.sendBtn}
+                      onClick={() => openCompare(asset)}
+                    >
+                      A/B 对比
+                    </button>
+                  ) : null}
+                  {canSend ? (
+                    <button
+                      type="button"
+                      className={styles.sendBtn}
+                      disabled={sendingId === asset.id}
+                      onClick={() => requestSendToChat(asset)}
+                    >
+                      {sendingId === asset.id ? "跳转中…" : "送回对话"}
+                    </button>
+                  ) : (
+                    <span className={styles.sendHint}>视频请用静帧作参考</span>
+                  )}
+                </div>
               </div>
             </article>
           );
@@ -290,6 +351,54 @@ export default function AssetGallery({
             : null
         }
       />
+
+      {comparePair ? (
+        <div className={styles.compareOverlay} role="dialog" aria-modal>
+          <div className={styles.compareCard}>
+            <div className={styles.compareHead}>
+              <strong>A/B 对比 · 母版 vs 当前</strong>
+              <button
+                type="button"
+                onClick={() => setComparePair(null)}
+              >
+                关闭
+              </button>
+            </div>
+            <div className={styles.compareGrid}>
+              <div>
+                <span className={styles.compareLabel}>母版</span>
+                <MediaPreview
+                  url={comparePair.parent.url}
+                  thumbUrl={comparePair.parent.thumbUrl}
+                  kind={comparePair.parent.kind}
+                  previewKind={comparePair.parent.previewKind}
+                  mimeType={comparePair.parent.mimeType}
+                  alt={comparePair.parent.name}
+                  className={styles.compareMedia}
+                  preferThumb
+                  controls={false}
+                />
+                <p>{comparePair.parent.name}</p>
+              </div>
+              <div>
+                <span className={styles.compareLabel}>当前</span>
+                <MediaPreview
+                  url={comparePair.current.url}
+                  thumbUrl={comparePair.current.thumbUrl}
+                  kind={comparePair.current.kind}
+                  previewKind={comparePair.current.previewKind}
+                  mimeType={comparePair.current.mimeType}
+                  alt={comparePair.current.name}
+                  className={styles.compareMedia}
+                  preferThumb
+                  controls={false}
+                />
+                <p>{comparePair.current.name}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <ConfirmDialog
         open={Boolean(sendTarget)}

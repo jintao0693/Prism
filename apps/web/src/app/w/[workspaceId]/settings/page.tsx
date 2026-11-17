@@ -1,5 +1,10 @@
 import SettingsPanel from "@/features/settings/components/SettingsPanel";
 
-export default function SettingsPage() {
-  return <SettingsPanel />;
+export default async function SettingsPage({
+  params,
+}: {
+  params: Promise<{ workspaceId: string }>;
+}) {
+  const { workspaceId } = await params;
+  return <SettingsPanel workspaceId={workspaceId} />;
 }

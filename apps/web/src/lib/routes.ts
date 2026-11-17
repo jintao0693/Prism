@@ -19,4 +19,6 @@ export const routes = {
   assets: (workspaceId: string) => `/w/${workspaceId}/assets`,
   jobs: (workspaceId: string) => `/w/${workspaceId}/jobs`,
   settings: (workspaceId: string) => `/w/${workspaceId}/settings`,
+  share: (token: string) => `/share/${token}`,
+  cases: "/cases",
 } as const;

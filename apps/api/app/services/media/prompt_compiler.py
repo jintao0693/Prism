@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from app.services.brand.pack import BrandPack
+
 
 @dataclass(frozen=True)
 class CompiledPrompt:
@@ -22,7 +24,7 @@ _VIDEO_NEGATIVES = (
     "高饱和霓虹紫, 低帧卡顿"
 )
 
-_BRAND_HINTS = (
+_DEFAULT_BRAND_HINTS = (
     "若涉及《幻境：星落传说》或同类二次元开放世界："
     "主色深空靛 #1B1F3B，点缀星辉金 #F0C75E；气质安静、干净留白。"
 )
@@ -33,6 +35,9 @@ def compile_media_prompt(
     *,
     kind: str,
     mode: str = "",
+    brand_pack: BrandPack | None = None,
+    size_hint: str = "",
+    ratio_hint: str = "",
 ) -> CompiledPrompt:
     """
     在用户原话上追加成片约束，不覆盖用户明确指令。
@@ -45,19 +50,40 @@ def compile_media_prompt(
     extras: dict[str, str] = {}
     parts = [text]
 
-    # 品牌色 / 气质（轻量注入，避免喧宾夺主）
-    if not any(x in text for x in ("#1B1F3B", "深空靛", "星辉金", "#F0C75E")):
-        parts.append(_BRAND_HINTS)
-        extras["brandHints"] = "default"
+    brand_text = brand_pack.prompt_hint() if brand_pack else _DEFAULT_BRAND_HINTS
+    color_tokens = []
+    if brand_pack:
+        color_tokens = [
+            brand_pack.primary_color,
+            brand_pack.accent_color,
+            brand_pack.primary_color_name,
+            brand_pack.accent_color_name,
+        ]
+    else:
+        color_tokens = ["#1B1F3B", "深空靛", "星辉金", "#F0C75E"]
+    if not any(x and x in text for x in color_tokens):
+        parts.append(brand_text)
+        extras["brandHints"] = brand_pack.name if brand_pack else "default"
 
     if kind == "image":
-        if "横版" not in text and "竖版" not in text and "比例" not in text:
+        if ratio_hint:
+            parts.append(f"画面比例约 {ratio_hint}。")
+            extras["ratio"] = ratio_hint
+        elif "横版" not in text and "竖版" not in text and "比例" not in text:
             parts.append("构图适合横版商店页 / KV，主体清晰，背景干净。")
             extras["layout"] = "landscape_kv"
+        if size_hint:
+            parts.append(f"输出清晰度偏好 {size_hint}。")
+            extras["size"] = size_hint
         if mode == "image_to_image":
             parts.append("在参考图基础上微调，保留构图与人物位置，不要大幅改构图。")
             extras["refine"] = "keep_composition"
-        parts.append(f"避免：{_IMAGE_NEGATIVES}。")
+        bans = (
+            "、".join(brand_pack.forbidden)
+            if brand_pack and brand_pack.forbidden
+            else _IMAGE_NEGATIVES
+        )
+        parts.append(f"避免：{bans}。")
         extras["negatives"] = "image"
     else:
         if "15" in text or "十五秒" in text:
@@ -75,7 +101,12 @@ def compile_media_prompt(
         elif mode == "image_to_video":
             parts.append("严格承接首帧图气质与构图，环境轻微动态即可。")
             extras["i2v"] = "follow_first_frame"
-        parts.append(f"避免：{_VIDEO_NEGATIVES}。")
+        bans = (
+            "、".join(brand_pack.forbidden)
+            if brand_pack and brand_pack.forbidden
+            else _VIDEO_NEGATIVES
+        )
+        parts.append(f"避免：{bans}。")
         extras["negatives"] = "video"
 
     compiled = "\n".join(parts)

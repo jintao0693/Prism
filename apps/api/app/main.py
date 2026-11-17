@@ -15,6 +15,7 @@ from app.bootstrap.seed_media import ensure_demo_media
 from app.core.config import get_settings
 from app.core.db import SessionLocal, init_db
 from app.core.logging import setup_logging
+from app.core.middleware import RequestIdMiddleware, SimpleRateLimitMiddleware
 from app.core.redis import close_redis
 from app.services.knowledge.vector_store import ensure_vector_schema
 
@@ -54,6 +55,8 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    app.add_middleware(SimpleRateLimitMiddleware)
+    app.add_middleware(RequestIdMiddleware)
     app.include_router(api_router)
 
     # 本地存储静态访问（演示）

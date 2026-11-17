@@ -1,6 +1,11 @@
 import { apiRequest, USE_MOCK } from "@/lib/api-client";
 import { mockDelay } from "@/lib/mock-delay";
-import type { UsageSummary, Workspace } from "@/types/domain";
+import type {
+  BrandPack,
+  UsageSummary,
+  Workspace,
+  WorkspaceMember,
+} from "@/types/domain";
 
 const WORKSPACES: Workspace[] = [
   {
@@ -62,6 +67,119 @@ export async function getWorkspace(workspaceId: string): Promise<Workspace> {
     `/workspaces/${workspaceId}`,
   );
   return mapWorkspace(raw);
+}
+
+export async function patchWorkspace(
+  workspaceId: string,
+  patch: { name?: string; description?: string; status?: Workspace["status"] },
+): Promise<Workspace> {
+  if (USE_MOCK) {
+    await mockDelay(120);
+    const ws = WORKSPACES.find((w) => w.id === workspaceId);
+    if (!ws) throw new Error("工作空间不存在");
+    Object.assign(ws, patch);
+    return ws;
+  }
+  const raw = await apiRequest<Record<string, unknown>>(
+    `/workspaces/${workspaceId}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(patch),
+    },
+    { workspaceId },
+  );
+  return mapWorkspace(raw);
+}
+
+export async function listWorkspaceMembers(
+  workspaceId: string,
+): Promise<WorkspaceMember[]> {
+  if (USE_MOCK) {
+    await mockDelay(100);
+    return [
+      {
+        userId: "u_demo",
+        name: "林青",
+        email: "linqing@prism.demo",
+        role: "owner",
+        avatarText: "林",
+      },
+    ];
+  }
+  const raw = await apiRequest<Record<string, unknown>[]>(
+    `/workspaces/${workspaceId}/members`,
+    {},
+    { workspaceId },
+  );
+  return raw.map((row) => ({
+    userId: String(row.userId ?? row.user_id ?? ""),
+    name: String(row.name ?? ""),
+    email: String(row.email ?? ""),
+    role: (row.role as WorkspaceMember["role"]) ?? "viewer",
+    avatarText: String(row.avatarText ?? row.avatar_text ?? "用"),
+  }));
+}
+
+function mapBrandPack(raw: Record<string, unknown>): BrandPack {
+  return {
+    name: String(raw.name ?? ""),
+    primaryColor: String(raw.primaryColor ?? raw.primary_color ?? ""),
+    accentColor: String(raw.accentColor ?? raw.accent_color ?? ""),
+    primaryColorName: String(
+      raw.primaryColorName ?? raw.primary_color_name ?? "",
+    ),
+    accentColorName: String(
+      raw.accentColorName ?? raw.accent_color_name ?? "",
+    ),
+    keywords: Array.isArray(raw.keywords)
+      ? raw.keywords.map((x) => String(x))
+      : [],
+    forbidden: Array.isArray(raw.forbidden)
+      ? raw.forbidden.map((x) => String(x))
+      : [],
+    toneHint: String(raw.toneHint ?? raw.tone_hint ?? ""),
+  };
+}
+
+export async function getBrandPack(workspaceId: string): Promise<BrandPack> {
+  if (USE_MOCK) {
+    await mockDelay(80);
+    return {
+      name: "默认品牌包",
+      primaryColor: "#1B1F3B",
+      accentColor: "#F0C75E",
+      primaryColorName: "深空靛",
+      accentColorName: "星辉金",
+      keywords: ["安静", "干净留白"],
+      forbidden: ["高饱和霓虹紫"],
+      toneHint: "气质安静、有召唤感。",
+    };
+  }
+  const raw = await apiRequest<Record<string, unknown>>(
+    `/workspaces/${workspaceId}/brand-pack`,
+    {},
+    { workspaceId },
+  );
+  return mapBrandPack(raw);
+}
+
+export async function saveBrandPack(
+  workspaceId: string,
+  pack: BrandPack,
+): Promise<BrandPack> {
+  if (USE_MOCK) {
+    await mockDelay(120);
+    return pack;
+  }
+  const raw = await apiRequest<Record<string, unknown>>(
+    `/workspaces/${workspaceId}/brand-pack`,
+    {
+      method: "PUT",
+      body: JSON.stringify(pack),
+    },
+    { workspaceId },
+  );
+  return mapBrandPack(raw);
 }
 
 export async function getUsageSummary(): Promise<UsageSummary> {

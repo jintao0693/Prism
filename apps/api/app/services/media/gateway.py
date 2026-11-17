@@ -8,6 +8,7 @@ from collections.abc import Awaitable, Callable
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.storage import StorageService, get_storage
+from app.services.brand.pack import BrandPack, get_workspace_brand_pack
 from app.services.media.prompt_compiler import CompiledPrompt, compile_media_prompt
 from app.services.media.providers.base import MediaProvider, MediaResult
 from app.services.media.providers.demo import DemoMediaProvider
@@ -24,25 +25,47 @@ class MediaGateway:
         self,
         provider: MediaProvider | None = None,
         storage: StorageService | None = None,
+        *,
+        brand_pack: BrandPack | None = None,
     ) -> None:
         self.provider = provider or DemoMediaProvider()
         self.storage = storage or get_storage()
         self.last_compiled: CompiledPrompt | None = None
+        self.brand_pack = brand_pack
 
     @classmethod
     async def for_tenant(
         cls,
         session: AsyncSession,
         tenant_id: str,
+        workspace_id: str | None = None,
     ) -> MediaGateway:
         """根据租户配置选择火山或演示 Provider。"""
         client = await build_volcengine_client(session, tenant_id)
+        brand_pack = None
+        if workspace_id:
+            brand_pack = await get_workspace_brand_pack(session, workspace_id)
         if client:
-            return cls(provider=VolcengineMediaProvider(client))
-        return cls(provider=DemoMediaProvider())
+            return cls(provider=VolcengineMediaProvider(client), brand_pack=brand_pack)
+        return cls(provider=DemoMediaProvider(), brand_pack=brand_pack)
 
-    def compile_prompt(self, prompt: str, *, kind: str, mode: str) -> CompiledPrompt:
-        compiled = compile_media_prompt(prompt, kind=kind, mode=mode)
+    def compile_prompt(
+        self,
+        prompt: str,
+        *,
+        kind: str,
+        mode: str,
+        size_hint: str = "",
+        ratio_hint: str = "",
+    ) -> CompiledPrompt:
+        compiled = compile_media_prompt(
+            prompt,
+            kind=kind,
+            mode=mode,
+            brand_pack=self.brand_pack,
+            size_hint=size_hint,
+            ratio_hint=ratio_hint,
+        )
         self.last_compiled = compiled
         return compiled
 
@@ -54,16 +77,28 @@ class MediaGateway:
         prompt: str,
         mode: str = "text_to_image",
         image_bytes: bytes | None = None,
+        size: str = "",
+        ratio: str = "",
+        seed: int | None = None,
     ) -> tuple[str, MediaResult, str]:
         """生成图片并写入存储。返回 (asset_id, result, storage_key)。"""
-        compiled = self.compile_prompt(prompt, kind="image", mode=mode)
+        size_norm = size if size in {"1K", "1.5K", "2K"} else "2K"
+        compiled = self.compile_prompt(
+            prompt,
+            kind="image",
+            mode=mode,
+            size_hint=size_norm,
+            ratio_hint=ratio,
+        )
+        if seed is not None:
+            compiled.extras["seed"] = str(seed)
         if mode == "image_to_image" and image_bytes:
             result = await self.provider.image_to_image(
                 compiled.text,
                 image_bytes=image_bytes,
             )
         else:
-            result = await self.provider.text_to_image(compiled.text)
+            result = await self.provider.text_to_image(compiled.text, size=size_norm)
 
         asset_id = f"asset_{uuid.uuid4().hex[:12]}"
         key = self.storage.build_key(

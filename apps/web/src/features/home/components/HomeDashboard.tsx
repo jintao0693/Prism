@@ -63,7 +63,20 @@ export default function HomeDashboard({
                 href={routes.chatConversation(workspaceId, c.id)}
                 className={styles.row}
               >
-                <span className={`thumb-${c.thumbTone} ${styles.thumb}`} />
+                <span className={`${styles.thumbBox} thumb-${c.thumbTone}`}>
+                  {c.thumbUrl ? (
+                    <MediaPreview
+                      url={c.thumbUrl}
+                      thumbUrl={c.thumbUrl}
+                      kind="image"
+                      previewKind="image"
+                      alt=""
+                      className={styles.thumbMedia}
+                      preferThumb
+                      controls={false}
+                    />
+                  ) : null}
+                </span>
                 <span className={styles.rowText}>
                   <strong>{c.title}</strong>
                   <span className={styles.meta}>

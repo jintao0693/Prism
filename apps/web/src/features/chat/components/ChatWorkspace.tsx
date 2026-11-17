@@ -34,11 +34,13 @@ import {
 } from "@/lib/pending-refs";
 import { formatQuotaHint } from "@/lib/quota-hint";
 import { routes } from "@/lib/routes";
+import MediaPreview from "@/components/media/MediaPreview";
 import type {
   ChatMessage,
   ConversationSummary,
   GenerationResult,
   KnowledgeBase,
+  MediaOptions,
   UsageSummary,
 } from "@/types/domain";
 import styles from "./ChatWorkspace.module.css";
@@ -343,7 +345,7 @@ export default function ChatWorkspace({
     setStickToBottom(true);
   }
 
-  async function handleSend(text: string, files: File[]) {
+  async function handleSend(text: string, files: File[], mediaOptions?: MediaOptions) {
     setError(null);
     setSending(true);
     setStickToBottom(true);
@@ -396,6 +398,7 @@ export default function ChatWorkspace({
         workspaceId,
         knowledgeBaseIds: selectedKbIds,
         referenceAssetIds,
+        mediaOptions,
         onProgress: (p) => {
           setStatusText(p.status);
           if (p.error) setError(p.error);
@@ -620,6 +623,23 @@ export default function ChatWorkspace({
                   router.push(routes.chatConversation(workspaceId, c.id));
                 }}
               >
+                {c.thumbUrl ? (
+                  <span className={styles.sessionCover}>
+                    <MediaPreview
+                      url={c.thumbUrl}
+                      thumbUrl={c.thumbUrl}
+                      kind="image"
+                      previewKind="image"
+                      alt=""
+                      className={styles.sessionCoverImg}
+                      preferThumb
+                      controls={false}
+                    />
+                  </span>
+                ) : (
+                  <span className={`thumb-${c.thumbTone} ${styles.sessionCover}`} />
+                )}
+                <span className={styles.sessionBody}>
                 <strong>{c.title}</strong>
                 <span>
                   {c.kind === "video"
@@ -628,6 +648,7 @@ export default function ChatWorkspace({
                       ? "图片"
                       : "对话"}{" "}
                   · {c.updatedAtLabel}
+                </span>
                 </span>
               </Link>
               <div className={styles.sessionActions}>

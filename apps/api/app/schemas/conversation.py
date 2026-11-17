@@ -13,6 +13,18 @@ class ConversationSummaryOut(BaseModel):
     kind: str
     updated_at_label: str = Field(alias="updatedAtLabel")
     thumb_tone: str = Field(alias="thumbTone", default="a")
+    thumb_url: str | None = Field(default=None, alias="thumbUrl")
+
+    model_config = {"populate_by_name": True}
+
+
+class MediaOptionsIn(BaseModel):
+    """生图 / 生视频可选参数。"""
+
+    size: str = ""
+    ratio: str = ""
+    seed: int | None = None
+    variants: int = Field(default=1, ge=1, le=4)
 
     model_config = {"populate_by_name": True}
 
@@ -57,6 +69,7 @@ class SendMessageRequest(BaseModel):
         alias="referenceAssetIds",
         max_length=4,
     )
+    media_options: MediaOptionsIn | None = Field(default=None, alias="mediaOptions")
 
     model_config = {"populate_by_name": True}
 

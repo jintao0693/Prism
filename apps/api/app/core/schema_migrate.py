@@ -26,6 +26,14 @@ _JOB_COLUMNS: dict[str, str] = {
     "mode": "VARCHAR(32)",
 }
 
+_WORKSPACE_COLUMNS: dict[str, str] = {
+    "brand_pack_json": "TEXT DEFAULT ''",
+}
+
+_ASSET_COLUMNS: dict[str, str] = {
+    "poster_key": "VARCHAR(512)",
+}
+
 
 async def ensure_runtime_schema(engine: AsyncEngine) -> None:
     """为已有表补齐开发期新增列（SQLite / Postgres）。"""
@@ -33,6 +41,8 @@ async def ensure_runtime_schema(engine: AsyncEngine) -> None:
     async with engine.begin() as conn:
         await _ensure_columns(conn, "conversations", _CONVERSATION_COLUMNS, dialect)
         await _ensure_columns(conn, "generation_jobs", _JOB_COLUMNS, dialect)
+        await _ensure_columns(conn, "workspaces", _WORKSPACE_COLUMNS, dialect)
+        await _ensure_columns(conn, "assets", _ASSET_COLUMNS, dialect)
 
 
 async def _ensure_columns(

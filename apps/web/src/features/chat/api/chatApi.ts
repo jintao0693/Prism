@@ -6,7 +6,12 @@ import {
   USE_MOCK,
 } from "@/lib/api-client";
 import { mockDelay } from "@/lib/mock-delay";
-import type { ChatMessage, ConversationSummary, GenerationResult } from "@/types/domain";
+import type {
+  ChatMessage,
+  ConversationSummary,
+  GenerationResult,
+  MediaOptions,
+} from "@/types/domain";
 
 const CONVERSATIONS: ConversationSummary[] = [
   {
@@ -47,6 +52,7 @@ export type SendMessageOptions = {
   workspaceId?: string;
   knowledgeBaseIds?: string[];
   referenceAssetIds?: string[];
+  mediaOptions?: MediaOptions;
   onProgress?: (progress: AgentProgress) => void;
 };
 
@@ -61,6 +67,13 @@ function mapConversation(raw: Record<string, unknown>): ConversationSummary {
     updatedAtLabel: String(raw.updatedAtLabel ?? raw.updated_at_label ?? ""),
     thumbTone: (String(raw.thumbTone ?? raw.thumb_tone ?? "a") ||
       "a") as ConversationSummary["thumbTone"],
+    thumbUrl: resolveMediaUrl(
+      raw.thumbUrl != null
+        ? String(raw.thumbUrl)
+        : raw.thumb_url != null
+          ? String(raw.thumb_url)
+          : undefined,
+    ),
   };
 }
 
@@ -576,7 +589,13 @@ export async function sendMessage(
 ): Promise<ChatMessage[]> {
   const opts: SendMessageOptions =
     typeof options === "string" ? { workspaceId: options } : options ?? {};
-  const { workspaceId, knowledgeBaseIds, referenceAssetIds, onProgress } = opts;
+  const {
+    workspaceId,
+    knowledgeBaseIds,
+    referenceAssetIds,
+    mediaOptions,
+    onProgress,
+  } = opts;
 
   if (USE_MOCK) {
     await mockDelay(600);
@@ -614,6 +633,7 @@ export async function sendMessage(
         content,
         knowledgeBaseIds: knowledgeBaseIds ?? [],
         referenceAssetIds: referenceAssetIds ?? [],
+        mediaOptions: mediaOptions ?? undefined,
       }),
     },
     overrides,

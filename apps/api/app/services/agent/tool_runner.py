@@ -270,83 +270,132 @@ async def _run_image_tool(
                 "data": {"name": tool_name, "note": "上一张图文件缺失，回退文生图"},
             }
 
-    try:
-        asset_id, result, key = await deps.media.generate_image(
-            tenant_id=deps.tenant_id,
-            workspace_id=deps.workspace_id,
-            prompt=user_text,
-            mode=mode,
-            image_bytes=image_bytes,
-        )
-    except Exception as exc:
-        friendly = format_ark_error(exc)
-        err = f"生图失败：{friendly}"
-        yield {
-            "type": "tool.result",
-            "data": {"name": tool_name, "error": friendly},
-        }
-        yield {"type": "text.delta", "data": {"text": err}}
-        yield {
-            "type": "message.done",
-            "data": {"content": err, "toolLabel": f"{tool_name} · 失败", "results": []},
-        }
-        return
+    opts = deps.media_options or {}
+    size = str(opts.get("size") or "").strip()
+    ratio = str(opts.get("ratio") or "").strip()
+    seed = opts.get("seed")
+    seed_int = int(seed) if seed is not None else None
+    variants = max(1, min(4, int(opts.get("variants") or 1)))
 
-    compiled = deps.media.last_compiled
-    meta = dumps_asset_meta(
-        prompt=user_text,
-        mode=mode,
-        parent_asset_id=parent_id,
-        provider=deps.media.provider.name,
-        extra={
-            "compiled_prompt": (compiled.text[:800] if compiled else ""),
-            "compiler": compiled.extras if compiled else {},
-        },
-    )
-    asset = Asset(
-        id=asset_id,
-        tenant_id=deps.tenant_id,
-        workspace_id=deps.workspace_id,
-        name=result.filename,
-        kind="image",
-        storage_key=key,
-        mime_type=result.mime_type,
-        meta=meta,
-        source_conversation_id=deps.conversation_id,
-    )
-    deps.db.add(asset)
     from app.services.media.preview import asset_preview_fields
 
-    preview = asset_preview_fields(asset)
-    url = preview["url"]
-    card = {
-        "id": asset_id,
-        "label": "图生图" if mode == "image_to_image" else "生图",
-        "tone": "a",
-        "kind": "image",
-        "url": url,
-        "thumbUrl": preview["thumbUrl"],
-        "mimeType": preview["mimeType"],
-        "previewKind": preview["previewKind"],
-        "parentAssetId": parent_id,
-    }
-    deps.generated_assets.append(card)
+    cards: list[dict] = []
+    last_asset_id = ""
+    last_url = ""
+    last_thumb = ""
+    for variant_idx in range(variants):
+        try:
+            asset_id, result, key = await deps.media.generate_image(
+                tenant_id=deps.tenant_id,
+                workspace_id=deps.workspace_id,
+                prompt=user_text,
+                mode=mode,
+                image_bytes=image_bytes,
+                size=size,
+                ratio=ratio,
+                seed=(seed_int + variant_idx) if seed_int is not None else None,
+            )
+        except Exception as exc:
+            if not cards:
+                friendly = format_ark_error(exc)
+                err = f"生图失败：{friendly}"
+                yield {
+                    "type": "tool.result",
+                    "data": {"name": tool_name, "error": friendly},
+                }
+                yield {"type": "text.delta", "data": {"text": err}}
+                yield {
+                    "type": "message.done",
+                    "data": {
+                        "content": err,
+                        "toolLabel": f"{tool_name} · 失败",
+                        "results": [],
+                    },
+                }
+                return
+            break
+
+        compiled = deps.media.last_compiled
+        meta = dumps_asset_meta(
+            prompt=user_text,
+            mode=mode,
+            parent_asset_id=parent_id,
+            provider=deps.media.provider.name,
+            extra={
+                "compiled_prompt": (compiled.text[:800] if compiled else ""),
+                "compiler": compiled.extras if compiled else {},
+                "variant": variant_idx + 1,
+                "variants": variants,
+                "mediaOptions": opts,
+            },
+        )
+        asset = Asset(
+            id=asset_id,
+            tenant_id=deps.tenant_id,
+            workspace_id=deps.workspace_id,
+            name=result.filename
+            if variants == 1
+            else f"v{variant_idx + 1}_{result.filename}",
+            kind="image",
+            storage_key=key,
+            mime_type=result.mime_type,
+            meta=meta,
+            source_conversation_id=deps.conversation_id,
+        )
+        deps.db.add(asset)
+        preview = asset_preview_fields(asset)
+        url = preview["url"]
+        card = {
+            "id": asset_id,
+            "label": "图生图" if mode == "image_to_image" else "生图",
+            "tone": "a",
+            "kind": "image",
+            "url": url,
+            "thumbUrl": preview["thumbUrl"],
+            "mimeType": preview["mimeType"],
+            "previewKind": preview["previewKind"],
+            "parentAssetId": parent_id,
+        }
+        cards.append(card)
+        deps.generated_assets.append(card)
+        last_asset_id = asset_id
+        last_url = url or ""
+        last_thumb = preview["thumbUrl"] or ""
+        if variants > 1:
+            yield {
+                "type": "tool.result",
+                "data": {
+                    "name": tool_name,
+                    "asset_id": asset_id,
+                    "url": url,
+                    "thumbUrl": preview["thumbUrl"],
+                    "variant": variant_idx + 1,
+                    "variants": variants,
+                },
+            }
+
     await deps.db.flush()
     from app.services.quota.usage import record_media_generation
 
-    await record_media_generation(deps.db, deps.tenant_id, kind="image")
-    yield {
-        "type": "tool.result",
-        "data": {
-            "name": tool_name,
-            "asset_id": asset_id,
-            "url": url,
-            "thumbUrl": preview["thumbUrl"],
-        },
-    }
+    for _ in cards:
+        await record_media_generation(deps.db, deps.tenant_id, kind="image")
+
+    if variants == 1:
+        yield {
+            "type": "tool.result",
+            "data": {
+                "name": tool_name,
+                "asset_id": last_asset_id,
+                "url": last_url,
+                "thumbUrl": last_thumb,
+            },
+        }
+    label = f"{variants} 张候选" if len(cards) > 1 else ""
     content = (
         f"已完成{'图生图' if mode == 'image_to_image' else '生图'}"
-        f"（{deps.media.provider.name}），资产 {asset_id} 已写入资产中心。"
+        f"（{deps.media.provider.name}"
+        f"{f'，{label}' if label else ''}"
+        f"），已写入资产中心。"
     )
     yield {"type": "text.delta", "data": {"text": content}}
     yield {
@@ -354,7 +403,7 @@ async def _run_image_tool(
         "data": {
             "content": content,
             "toolLabel": f"{tool_name} · 完成",
-            "results": [card],
+            "results": cards,
         },
     }
 

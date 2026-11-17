@@ -129,12 +129,34 @@
 }
 
 .session {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 10px;
   width: 100%;
   text-align: left;
   padding: 12px;
   border-radius: 12px;
   margin-bottom: 4px;
+}
+
+.sessionCover {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.sessionCoverImg {
+  width: 40px !important;
+  height: 40px !important;
+  object-fit: cover;
+  border-radius: 10px;
+}
+
+.sessionBody {
+  min-width: 0;
+  flex: 1;
 }
 
 .session:hover {
@@ -149,13 +171,13 @@
   background: var(--accent-soft);
 }
 
-.session strong {
+.sessionBody strong {
   display: block;
   font-size: 13px;
   margin-bottom: 4px;
 }
 
-.session span {
+.sessionBody > span {
   font-size: 11px;
   color: var(--muted);
 }

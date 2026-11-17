@@ -95,7 +95,7 @@ async def _execute_video_job(
 ) -> None:
     async with SessionLocal() as session:
         try:
-            media = await MediaGateway.for_tenant(session, tenant_id)
+            media = await MediaGateway.for_tenant(session, tenant_id, workspace_id)
 
             async def on_progress(status: str, elapsed: float, task_id: str) -> None:
                 async with SessionLocal() as prog:
@@ -126,6 +126,23 @@ async def _execute_video_job(
                     "compiler": compiled.extras if compiled else {},
                 },
             )
+            poster_key: str | None = None
+            from app.services.media.posters import extract_video_poster
+
+            poster_bytes = extract_video_poster(result.data)
+            if poster_bytes:
+                poster_key = media.storage.build_key(
+                    tenant_id,
+                    workspace_id,
+                    "poster.jpg",
+                    folder="posters",
+                )
+                await media.storage.put_bytes(
+                    poster_key,
+                    poster_bytes,
+                    content_type="image/jpeg",
+                )
+
             asset = Asset(
                 id=asset_id,
                 tenant_id=tenant_id,
@@ -135,6 +152,7 @@ async def _execute_video_job(
                 storage_key=key,
                 mime_type=result.mime_type,
                 meta=meta,
+                poster_key=poster_key,
                 source_conversation_id=conversation_id,
                 source_job_id=job_id,
             )

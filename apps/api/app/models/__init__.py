@@ -6,6 +6,7 @@ from app.models.job import GenerationJob
 from app.models.knowledge import KnowledgeBase, KnowledgeItem
 from app.models.provider_config import TenantProviderConfig
 from app.models.quota import QuotaUsage
+from app.models.share import ShareLink
 from app.models.tenant import Membership, Tenant
 from app.models.user import User
 from app.models.workspace import Workspace
@@ -19,6 +20,7 @@ __all__ = [
     "Membership",
     "Message",
     "QuotaUsage",
+    "ShareLink",
     "Tenant",
     "TenantProviderConfig",
     "User",

@@ -6,10 +6,11 @@
 
 ### Added
 
+- 会话封面（最近生成图）、生图参数（size/ratio/variants）、视频海报抽帧、只读分享链接、工作空间重命名/归档/成员、可编辑 Brand Pack、资产 A/B 对比
+- 计费雏形 `GET /billing/summary`；角色门槛 `require_min_role`；S3/MinIO 存储后端；request_id + 简易限流；dependabot / pre-commit / devcontainer；`/cases` 案例页
 - Seedance 2.x 多模态参考生视频：`reference_image_urls` / 首尾帧互斥、最长约 15s；`reference_to_video` Provider API
-- README 明星案例：分镜板 + 约 15s 成片，并用 `<video>` 在 GitHub 内嵌可播放（`case-adv-15s.mp4`）
-- README / GAME_CASES 高级案例：母版血缘树、定妆多镜叙事板（`docs/media/cases/case-adv-*`）
-- 前端体验打磨：会话切换防闪烁与加载重试、Enter 发送、结果快捷再创作、KB 命名创建、设置/资产失败可恢复、ConfirmDialog / Markdown 气泡
+- README 明星案例：分镜板 + 约 15s 成片（GitHub user-attachments 内嵌播放）
+- 前端体验打磨：会话切换防闪烁与加载重试、Enter 发送、结果快捷再创作、KB 命名创建、设置/资产失败可恢复
 
 - 多模态 Agent 统一 `tool_runner`：文/图生图、文/图生视频、KB 检索；资产记忆与 `parentAssetId` 血缘
 - 对话多轮上下文：滑动窗 + 摘要检查点；usage 触发自动压缩；手动 `POST .../compact`

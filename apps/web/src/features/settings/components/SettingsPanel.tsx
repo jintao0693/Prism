@@ -10,15 +10,37 @@ import {
   updateVolcengineConfig,
 } from "@/features/settings/api/settingsApi";
 import type { VolcengineProviderConfig } from "@/features/settings/types";
-import { getUsageSummary } from "@/features/workspace/api/workspaceApi";
+import {
+  getBrandPack,
+  getUsageSummary,
+  getWorkspace,
+  listWorkspaceMembers,
+  patchWorkspace,
+  saveBrandPack,
+} from "@/features/workspace/api/workspaceApi";
+import type {
+  BrandPack,
+  UsageSummary,
+  Workspace,
+  WorkspaceMember,
+} from "@/types/domain";
 import { loadStoredAuth } from "@/features/auth";
 import { USE_MOCK } from "@/lib/api-client";
-import type { UsageSummary } from "@/types/domain";
 import styles from "./SettingsPanel.module.css";
 
-export default function SettingsPanel() {
+export interface SettingsPanelProps {
+  workspaceId: string;
+}
+
+export default function SettingsPanel({ workspaceId }: SettingsPanelProps) {
   const [config, setConfig] = useState<VolcengineProviderConfig | null>(null);
   const [usage, setUsage] = useState<UsageSummary | null>(null);
+  const [workspace, setWorkspace] = useState<Workspace | null>(null);
+  const [wsName, setWsName] = useState("");
+  const [members, setMembers] = useState<WorkspaceMember[]>([]);
+  const [brandPack, setBrandPack] = useState<BrandPack | null>(null);
+  const [keywordsText, setKeywordsText] = useState("");
+  const [forbiddenText, setForbiddenText] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [messageTone, setMessageTone] = useState<"ok" | "err">("ok");
@@ -42,6 +64,86 @@ export default function SettingsPanel() {
       void getUsageSummary()
         .then(setUsage)
         .catch(() => setUsage(null));
+      void getWorkspace(workspaceId)
+        .then((ws) => {
+          setWorkspace(ws);
+          setWsName(ws.name);
+        })
+        .catch(() => setWorkspace(null));
+      void listWorkspaceMembers(workspaceId)
+        .then(setMembers)
+        .catch(() => setMembers([]));
+      void getBrandPack(workspaceId)
+        .then((pack) => {
+          setBrandPack(pack);
+          setKeywordsText(pack.keywords.join("、"));
+          setForbiddenText(pack.forbidden.join("、"));
+        })
+        .catch(() => setBrandPack(null));
+    });
+  }
+
+  function saveWorkspace() {
+    if (!workspace) return;
+    const name = wsName.trim();
+    if (!name) return;
+    setMessage(null);
+    startTransition(() => {
+      void patchWorkspace(workspaceId, { name })
+        .then((ws) => {
+          setWorkspace(ws);
+          setMessageTone("ok");
+          setMessage("工作空间名称已更新");
+        })
+        .catch((err: Error) => {
+          setMessageTone("err");
+          setMessage(err.message);
+        });
+    });
+  }
+
+  function archiveWorkspace() {
+    if (!workspace || workspace.status === "archived") return;
+    setMessage(null);
+    startTransition(() => {
+      void patchWorkspace(workspaceId, { status: "archived" })
+        .then((ws) => {
+          setWorkspace(ws);
+          setMessageTone("ok");
+          setMessage("工作空间已归档（只读演示状态）");
+        })
+        .catch((err: Error) => {
+          setMessageTone("err");
+          setMessage(err.message);
+        });
+    });
+  }
+
+  function saveBrand() {
+    if (!brandPack) return;
+    setMessage(null);
+    const payload: BrandPack = {
+      ...brandPack,
+      keywords: keywordsText
+        .split(/[,，、\n]+/)
+        .map((x) => x.trim())
+        .filter(Boolean),
+      forbidden: forbiddenText
+        .split(/[,，、\n]+/)
+        .map((x) => x.trim())
+        .filter(Boolean),
+    };
+    startTransition(() => {
+      void saveBrandPack(workspaceId, payload)
+        .then((next) => {
+          setBrandPack(next);
+          setMessageTone("ok");
+          setMessage("Brand Pack 已保存，将影响后续生图提示词编译");
+        })
+        .catch((err: Error) => {
+          setMessageTone("err");
+          setMessage(err.message);
+        });
     });
   }
 
@@ -49,7 +151,7 @@ export default function SettingsPanel() {
     loadStoredAuth();
     loadConfig();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [workspaceId]);
 
   function save() {
     if (!config) return;
@@ -103,12 +205,148 @@ export default function SettingsPanel() {
       />
 
       <Panel className={styles.panel}>
-        <section className={styles.soonBlock}>
+        <section>
           <h3>工作空间</h3>
-          <p>
-            重命名、归档与成员管理即将推出。
-            <span className={styles.soonBadge}>即将推出</span>
+          <p className={styles.hint}>
+            重命名、归档与成员查看。状态：
+            <strong>{workspace?.status ?? "…"}</strong>
           </p>
+          {workspace ? (
+            <div className={styles.form}>
+              <label>
+                名称
+                <input
+                  value={wsName}
+                  onChange={(e) => setWsName(e.target.value)}
+                />
+              </label>
+              <div className={styles.actions}>
+                <Button onClick={saveWorkspace} disabled={pending}>
+                  保存名称
+                </Button>
+                <Button
+                  variant="ghost"
+                  disabled={pending || workspace.status === "archived"}
+                  onClick={archiveWorkspace}
+                >
+                  归档空间
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <p className={styles.hint}>加载工作空间中…</p>
+          )}
+          {members.length > 0 ? (
+            <ul className={styles.memberList}>
+              {members.map((m) => (
+                <li key={m.userId}>
+                  <span className={styles.memberAvatar}>{m.avatarText}</span>
+                  <span>
+                    <strong>{m.name}</strong> · {m.email} · {m.role}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className={styles.hint}>成员列表加载中或无数据。</p>
+          )}
+        </section>
+
+        <section>
+          <h3>Brand Pack</h3>
+          <p className={styles.hint}>
+            主色、禁忌词与气质会注入生图 / 生视频提示词编译。
+          </p>
+          {brandPack ? (
+            <div className={styles.form}>
+              <label>
+                品牌名
+                <input
+                  value={brandPack.name}
+                  onChange={(e) =>
+                    setBrandPack({ ...brandPack, name: e.target.value })
+                  }
+                />
+              </label>
+              <label>
+                主色名 / 色值
+                <div className={styles.pairRow}>
+                  <input
+                    value={brandPack.primaryColorName}
+                    onChange={(e) =>
+                      setBrandPack({
+                        ...brandPack,
+                        primaryColorName: e.target.value,
+                      })
+                    }
+                  />
+                  <input
+                    value={brandPack.primaryColor}
+                    onChange={(e) =>
+                      setBrandPack({
+                        ...brandPack,
+                        primaryColor: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+              </label>
+              <label>
+                点缀色名 / 色值
+                <div className={styles.pairRow}>
+                  <input
+                    value={brandPack.accentColorName}
+                    onChange={(e) =>
+                      setBrandPack({
+                        ...brandPack,
+                        accentColorName: e.target.value,
+                      })
+                    }
+                  />
+                  <input
+                    value={brandPack.accentColor}
+                    onChange={(e) =>
+                      setBrandPack({
+                        ...brandPack,
+                        accentColor: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+              </label>
+              <label>
+                关键词（顿号或逗号分隔）
+                <input
+                  value={keywordsText}
+                  onChange={(e) => setKeywordsText(e.target.value)}
+                />
+              </label>
+              <label>
+                禁用项
+                <input
+                  value={forbiddenText}
+                  onChange={(e) => setForbiddenText(e.target.value)}
+                />
+              </label>
+              <label>
+                气质提示
+                <textarea
+                  rows={2}
+                  value={brandPack.toneHint}
+                  onChange={(e) =>
+                    setBrandPack({ ...brandPack, toneHint: e.target.value })
+                  }
+                />
+              </label>
+              <div className={styles.actions}>
+                <Button onClick={saveBrand} disabled={pending}>
+                  保存 Brand Pack
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <p className={styles.hint}>Brand Pack 加载中…</p>
+          )}
         </section>
 
         <section className={styles.provider}>

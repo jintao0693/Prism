@@ -30,3 +30,5 @@ class PrismDeps:
     last_total_tokens: int | None = None
     # 运行过程中收集到的产物，供 SSE 回传
     generated_assets: list[dict] = field(default_factory=list)
+    # 生图 / 生视频可选参数（size / ratio / seed / variants）
+    media_options: dict = field(default_factory=dict)

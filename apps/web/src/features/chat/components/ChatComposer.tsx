@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import Button from "@/components/ui/Button";
+import type { MediaOptions } from "@/types/domain";
 import styles from "./ChatComposer.module.css";
 
 const PROMPT_TEMPLATES = [
@@ -41,7 +42,11 @@ export interface ChatComposerProps {
   /** 外部注入草稿（失败重试 / 知识库带回） */
   draftText?: string | null;
   draftNonce?: number;
-  onSend: (text: string, attachments: File[]) => Promise<void> | void;
+  onSend: (
+    text: string,
+    attachments: File[],
+    mediaOptions?: MediaOptions,
+  ) => Promise<void> | void;
   knowledgeBases?: ComposerKbOption[];
   selectedKbIds?: string[];
   onToggleKb?: (id: string) => void;
@@ -68,6 +73,10 @@ export default function ChatComposer({
   const [sending, setSending] = useState(false);
   const [attachments, setAttachments] = useState<ComposerAttachment[]>([]);
   const [attachHint, setAttachHint] = useState<string | null>(null);
+  const [imageSize, setImageSize] = useState("2K");
+  const [imageRatio, setImageRatio] = useState("16:9");
+  const [seedText, setSeedText] = useState("");
+  const [variants, setVariants] = useState(1);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -115,9 +124,17 @@ export default function ChatComposer({
     if (!payloadText) return;
     setSending(true);
     try {
+      const seed = seedText.trim() ? Number(seedText.trim()) : undefined;
+      const mediaOptions: MediaOptions = {
+        size: imageSize,
+        ratio: imageRatio,
+        variants,
+        seed: Number.isFinite(seed) ? seed : undefined,
+      };
       await onSend(
         payloadText,
         attachments.map((a) => a.file),
+        mediaOptions,
       );
       setValue("");
       clearAttachments();
@@ -241,6 +258,57 @@ export default function ChatComposer({
         ) : null}
         {statusText ? <p className={styles.status}>{statusText}</p> : null}
         {quotaHint ? <p className={styles.quotaHint}>{quotaHint}</p> : null}
+      </div>
+
+      <div className={styles.mediaRow}>
+        <span className={styles.metaLabel}>出图参数</span>
+        <label className={styles.inlineField}>
+          清晰度
+          <select
+            value={imageSize}
+            disabled={busy}
+            onChange={(e) => setImageSize(e.target.value)}
+          >
+            <option value="1K">1K</option>
+            <option value="2K">2K</option>
+          </select>
+        </label>
+        <label className={styles.inlineField}>
+          比例
+          <select
+            value={imageRatio}
+            disabled={busy}
+            onChange={(e) => setImageRatio(e.target.value)}
+          >
+            <option value="16:9">16:9</option>
+            <option value="1:1">1:1</option>
+            <option value="9:16">9:16</option>
+          </select>
+        </label>
+        <label className={styles.inlineField}>
+          种子
+          <input
+            type="number"
+            placeholder="可选"
+            value={seedText}
+            disabled={busy}
+            onChange={(e) => setSeedText(e.target.value)}
+          />
+        </label>
+        <label className={styles.inlineField}>
+          张数
+          <select
+            value={variants}
+            disabled={busy}
+            onChange={(e) => setVariants(Number(e.target.value))}
+          >
+            {[1, 2, 3, 4].map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
 
       <div className={styles.kbRow}>

@@ -50,11 +50,22 @@ def resolve_preview(
 
 
 def asset_preview_fields(asset: Asset, storage: StorageService | None = None) -> dict:
+    store = storage or get_storage()
+    poster_key = getattr(asset, "poster_key", None)
+    if asset.kind == "video" and poster_key:
+        url = store.public_url(asset.storage_key) if asset.storage_key else None
+        thumb = store.public_thumb_url(poster_key, mime_type="image/jpeg")
+        return {
+            "url": url,
+            "thumbUrl": thumb or url,
+            "mimeType": asset.mime_type or "video/mp4",
+            "previewKind": "video",
+        }
     url, thumb, mime, preview = resolve_preview(
         storage_key=asset.storage_key,
         kind=asset.kind,
         mime_type=asset.mime_type or "",
-        storage=storage,
+        storage=store,
     )
     return {
         "url": url,
