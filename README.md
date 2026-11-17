@@ -67,16 +67,11 @@
 |---|---|---|---|---|---|
 | ![cliff](docs/media/cases/sb-01-cliff.jpg) | ![bridge](docs/media/cases/sb-02-bridge.jpg) | ![portrait](docs/media/cases/sb-03-portrait.jpg) | ![ruins](docs/media/cases/sb-04-ruins.jpg) | ![leap](docs/media/cases/sb-06-leap.jpg) | ![finale](docs/media/cases/sb-05-finale.jpg) |
 
-**成片（页面内直接播放）**
+**成片（GitHub 内直接播放）**
 
-<p align="center">
-  <video width="720" controls muted playsinline preload="metadata">
-    <source src="https://cdn.jsdelivr.net/gh/jintao0693/Prism@main/docs/media/cases/case-adv-15s.mp4" type="video/mp4" />
-  </video>
-</p>
+https://github.com/user-attachments/assets/0bb9d578-d415-4eaa-8513-d5e5e5d0ce17
 
-仓库内备份：[`docs/media/cases/case-adv-15s.mp4`](docs/media/cases/case-adv-15s.mp4)。产品侧已支持 Seedance 2.x 多模态参考生视频（多图 `reference_image`，最长约 15s）；设置页换成已开通的 Seedance 2.x Model ID 即可调用。
-**别人看完会想用的点**  
+仓库备份：[`docs/media/cases/case-adv-15s.mp4`](docs/media/cases/case-adv-15s.mp4)。产品侧已支持 Seedance 2.x 多模态参考生视频（多图 `reference_image`，最长约 15s）；设置页换成已开通的 Seedance 2.x Model ID 即可调用。**别人看完会想用的点**  
 不是「再出一张静帧」，而是 **分镜资产 → 多模态参考 → 可投放时长的成片**，这才是发行内容组愿意换工具的理由。
 
 ---
